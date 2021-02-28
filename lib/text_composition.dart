@@ -51,7 +51,7 @@ class TextComposition {
   List<TextPage> get pages => _pages;
   int get pageCount => _pages.length;
 
-  /// 每一页内容
+  /// 全部内容
   late final List<TextLine> _lines;
   List<TextLine> get lines => _lines;
   int get lineCount => _lines.length;
@@ -66,30 +66,30 @@ class TextComposition {
   /// * [paragraphs] 为空时使用[text], 否则忽略[text],
   /// * [size] 字号
   /// * [height] 行高
+  /// * [family] 字体
   /// * [paragraph] 段高
+  /// * [shouldJustifyHeight] 是否底栏对齐
   /// * [boxWidth] 容器宽度
   /// * [boxHeight] 容器高度
-  /// * [isHeightJustify] 是否底栏对齐
   TextComposition({
-    this.text,
     List<String>? paragraphs,
-    required this.size,
+    this.text,
+    this.size = 14,
     this.height = 1,
     this.family,
-    required this.paragraph,
+    this.paragraph = 0.0,
+    this.shouldJustifyHeight = true,
     required this.boxWidth,
     required this.boxHeight,
-    this.shouldJustifyHeight = true,
   }) {
     _height = size * height;
     _boxWidth = boxWidth - size;
     _boxHeight = boxHeight - _height;
-
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
     _lines = <TextLine>[];
 
-    /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset` [_boxHeight2] 下一行是新段落时\
+    /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset` [boxHeight2] 下一行是新段落时\
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
     final boxHeight2 = boxHeight - _height - paragraph;
