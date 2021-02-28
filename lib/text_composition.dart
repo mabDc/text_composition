@@ -25,9 +25,6 @@ class TextComposition {
   /// 容器高度
   final double boxHeight;
 
-  /// 对齐高度判断
-  late final double _boxHeight;
-
   /// 字号
   final double size;
 
@@ -36,9 +33,6 @@ class TextComposition {
 
   /// 行高
   final double height;
-
-  /// 实际行高
-  late final double _height;
 
   /// 段高
   final double paragraph;
@@ -67,33 +61,33 @@ class TextComposition {
   /// * [size] 字号
   /// * [height] 行高
   /// * [family] 字体
-  /// * [paragraph] 段高
-  /// * [shouldJustifyHeight] 是否底栏对齐
   /// * [boxWidth] 容器宽度
   /// * [boxHeight] 容器高度
+  /// * [paragraph] 段高
+  /// * [shouldJustifyHeight] 是否底栏对齐
   TextComposition({
     List<String>? paragraphs,
     this.text,
     this.size = 14,
     this.height = 1,
     this.family,
+    this.boxWidth = double.infinity,
+    this.boxHeight = double.infinity,
     this.paragraph = 0.0,
     this.shouldJustifyHeight = true,
-    required this.boxWidth,
-    required this.boxHeight,
   }) {
-    _height = size * height;
     _boxWidth = boxWidth - size;
-    _boxHeight = boxHeight - _height;
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
     _lines = <TextLine>[];
 
-    /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset` [boxHeight2] 下一行是新段落时\
+    /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset`
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
-    final boxHeight2 = boxHeight - _height - paragraph;
     final style = TextStyle(fontSize: size, fontFamily: family);
+    final _height = size * height;
+    final _boxHeight = boxHeight - _height;
+    final _boxHeight2 = _boxHeight - paragraph;
 
     var paragraphCount = 0;
     var pageHeight = 0.0;
@@ -121,7 +115,7 @@ class TextComposition {
 
         /// 段落结束 跳出循环 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
         if (p.isEmpty) {
-          if (pageHeight > boxHeight2) {
+          if (pageHeight > _boxHeight2) {
             newPage();
           } else {
             lines.add(TextLine(paragraphGap: true));
