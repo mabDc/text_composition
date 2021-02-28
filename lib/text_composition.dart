@@ -84,15 +84,15 @@ class TextComposition {
     _height = size * height;
     _boxWidth = boxWidth - size;
     _boxHeight = boxHeight - _height;
-    // 下一行是新段落时
-    final _boxHeight2 = boxHeight - _height - paragraph;
+
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
     _lines = <TextLine>[];
 
-    /// [ts] 只有一行的`TextPainter` [offset] 只有一行的`offset`
+    /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset` [_boxHeight2] 下一行是新段落时\
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
+    final boxHeight2 = boxHeight - _height - paragraph;
     final style = TextStyle(fontSize: size, fontFamily: family);
 
     var paragraphCount = 0;
@@ -110,10 +110,18 @@ class TextComposition {
 
     for (var p in _paragraphs) {
       while (true) {
-        /// 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
-        /// 段落结束 跳出循环
+        tp.text = TextSpan(text: p, style: style);
+        tp.layout(maxWidth: boxWidth);
+        final textCount = tp.getPositionForOffset(offset).offset;
+        lines.add(TextLine(
+            text: p.substring(0, textCount), textCount: textCount, width: tp.width));
+        endLine++;
+        pageHeight += _height;
+        p = p.substring(textCount);
+
+        /// 段落结束 跳出循环 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
         if (p.isEmpty) {
-          if (pageHeight > _boxHeight2) {
+          if (pageHeight > boxHeight2) {
             newPage();
           } else {
             lines.add(TextLine(paragraphGap: true));
@@ -125,24 +133,16 @@ class TextComposition {
         } else if (pageHeight > _boxHeight) {
           newPage();
         }
-        tp.text = TextSpan(text: p, style: style);
-        tp.layout(maxWidth: boxWidth);
-        final textCount = tp.getPositionForOffset(offset).offset;
-        lines.add(TextLine(
-            text: p.substring(0, textCount), textCount: textCount, width: tp.width));
-        endLine++;
-        pageHeight += _height;
-        p = p.substring(textCount);
       }
     }
     if (endLine > startLine) {
-      _pages.add(TextPage(startLine, endLine, pageHeight, paragraphCount));
+      _pages.add(TextPage(startLine, endLine, pageHeight, paragraphCount, false));
     }
   }
 
   TextSpan getLineView(TextLine line) {
     if (line.textCount == 0) return TextSpan(text: "");
-    if (_boxWidth > line.width) return TextSpan(text: line.text);
+    if (line.width < _boxWidth) return TextSpan(text: line.text);
     return TextSpan(
       text: line.text,
       style: TextStyle(
@@ -152,7 +152,7 @@ class TextComposition {
   }
 
   TextSpan getPageView(TextPage page) {
-    final paragraphHeight = shouldJustifyHeight && page.height > _boxHeight
+    final paragraphHeight = shouldJustifyHeight && page.shouldJustifyHeight
         ? (boxHeight - page.height) / page.paragraphCount
         : 1.0;
     return TextSpan(
@@ -181,7 +181,9 @@ class TextPage {
   final int endLine;
   final int paragraphCount;
   final double height;
-  TextPage(this.startLine, this.endLine, this.height, this.paragraphCount);
+  final bool shouldJustifyHeight;
+  TextPage(this.startLine, this.endLine, this.height, this.paragraphCount,
+      [this.shouldJustifyHeight = true]);
 }
 
 class TextLine {
