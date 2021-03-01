@@ -22,7 +22,7 @@ class TextComposition {
   /// 容器高度
   final double boxHeight;
 
-  /// 字体样式
+  /// 字体样式 字号 行高 字体 字色
   final TextStyle? style;
 
   /// 段间距
@@ -50,7 +50,7 @@ class TextComposition {
   /// * [paragraphs] 待渲染文本内容 已经预处理: 不重新计算空行 不重新缩进
   /// * [paragraphs] 为空时使用[text], 否则忽略[text],
   /// * [size] 字号
-  /// * [style] 字体样式 字号 行高 字体
+  /// * [style] 字体样式 字号 行高 字体 字色
   /// * [height] 行高
   /// * [family] 字体
   /// * [boxWidth] 容器宽度
@@ -148,7 +148,7 @@ class TextComposition {
     return TextSpan(text: line.text);
   }
 
-  TextSpan getPageView(TextPage page) {
+  List<TextSpan> getPageSpans(TextPage page) {
     var paragraphJustifyHeight = paragraph.toDouble();
     var restJustifyHeight = 0;
     if (shouldJustifyHeight && page.shouldJustifyHeight) {
@@ -157,31 +157,28 @@ class TextComposition {
       paragraphJustifyHeight += rest ~/ page.paragraphCount;
     }
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
-    return TextSpan(
-      style: style,
-      children: lines.sublist(page.startLine, page.endLine).map((line) {
-        if (line.paragraphGap) {
-          /// restJustifyHeight趋于0
-          if (restJustifyHeight-- > 0) {
-            return TextSpan(
-              text: "\n \n",
-              style: TextStyle(
-                fontSize: paragraphJustifyHeight + 1,
-                height: 1,
-              ),
-            );
-          }
+    return lines.sublist(page.startLine, page.endLine).map((line) {
+      if (line.paragraphGap) {
+        /// restJustifyHeight趋于0
+        if (restJustifyHeight-- > 0) {
           return TextSpan(
             text: "\n \n",
             style: TextStyle(
-              fontSize: paragraphJustifyHeight,
+              fontSize: paragraphJustifyHeight + 1,
               height: 1,
             ),
           );
         }
-        return getLineView(line, tp);
-      }).toList(),
-    );
+        return TextSpan(
+          text: "\n \n",
+          style: TextStyle(
+            fontSize: paragraphJustifyHeight,
+            height: 1,
+          ),
+        );
+      }
+      return getLineView(line, tp);
+    }).toList();
   }
 
   Widget getPageWidget(TextPage page) {
@@ -189,7 +186,10 @@ class TextComposition {
       width: boxWidth,
       height: boxHeight,
       child: RichText(
-        text: getPageView(page),
+        text: TextSpan(
+          style: style,
+          children: getPageSpans(page),
+        ),
       ),
     );
   }
