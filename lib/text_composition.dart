@@ -31,8 +31,8 @@ class TextComposition {
   /// 行高
   final double height;
 
-  /// 段高
-  late final double paragraph;
+  /// 段间距
+  late final int paragraph;
 
   /// 是否底栏对齐
   final bool shouldJustifyHeight;
@@ -60,16 +60,16 @@ class TextComposition {
   /// * [family] 字体
   /// * [boxWidth] 容器宽度
   /// * [boxHeight] 容器高度
-  /// * [paragraph] 段高
+  /// * [paragraph] 段间距
   /// * [shouldJustifyHeight] 是否底栏对齐
   TextComposition({
     List<String>? paragraphs,
     this.text,
-    this.size = 16,
-    this.height = 1.5,
+    this.size = 16.0,
+    this.height = 1.55,
     this.family,
-    this.boxWidth = double.infinity,
-    this.boxHeight = double.infinity,
+    required this.boxWidth,
+    required this.boxHeight,
     this.paragraph = 10,
     this.shouldJustifyHeight = true,
   }) {
@@ -81,20 +81,21 @@ class TextComposition {
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
     final style = TextStyle(fontSize: size, fontFamily: family, height: height);
-    final _height = size * height;
+    // final _height = size * height; //这个结果不行
+    final _height = (size * height).ceil(); //pixel用整数 向上取整就对了
     final _boxHeight = boxHeight - _height;
     final _boxHeight2 = _boxHeight - paragraph;
     final _boxWidth = boxWidth - size;
 
     var paragraphCount = 0;
-    var pageHeight = 0.0;
+    var pageHeight = 0;
     var startLine = 0;
 
     /// 下一页
     void newPage() {
       _pages.add(TextPage(startLine, lines.length, pageHeight, paragraphCount));
       paragraphCount = 0;
-      pageHeight = 0.0;
+      pageHeight = 0;
       startLine = lines.length;
     }
 
@@ -146,7 +147,7 @@ class TextComposition {
       return TextSpan(
         text: line.text,
         style: TextStyle(
-          letterSpacing: (boxWidth - 2 - tp.width) / line.textCount,
+          letterSpacing: (boxWidth - 1 - tp.width) / line.textCount,
         ),
       );
     }
@@ -154,9 +155,13 @@ class TextComposition {
   }
 
   TextSpan getPageView(TextPage page) {
-    final paragraphHeight = shouldJustifyHeight && page.shouldJustifyHeight
-        ? paragraph + (boxHeight - page.height) / page.paragraphCount
-        : paragraph;
+    var paragraphJustifyHeight = paragraph.toDouble();
+    var restJustifyHeight = 0;
+    if (shouldJustifyHeight && page.shouldJustifyHeight) {
+      final rest = boxHeight.ceil() - page.height;
+      restJustifyHeight = rest % page.paragraphCount;
+      paragraphJustifyHeight += rest ~/ page.paragraphCount;
+    }
     final style = TextStyle(
       height: height,
       fontSize: size,
@@ -166,16 +171,37 @@ class TextComposition {
     return TextSpan(
       style: style,
       children: lines.sublist(page.startLine, page.endLine).map((line) {
-        if (line.paragraphGap)
+        if (line.paragraphGap) {
+          /// restJustifyHeight趋于0
+          if (restJustifyHeight-->0) {
+            return TextSpan(
+              text: "\n \n",
+              style: TextStyle(
+                fontSize: paragraphJustifyHeight + 1,
+                height: 1,
+              ),
+            );
+          }
           return TextSpan(
             text: "\n \n",
             style: TextStyle(
-              fontSize: paragraphHeight,
+              fontSize: paragraphJustifyHeight,
               height: 1,
             ),
           );
+        }
         return getLineView(line, tp, style);
       }).toList(),
+    );
+  }
+
+  Widget getPageWidget(TextPage page) {
+    return Container(
+      width: boxWidth,
+      height: boxHeight,
+      child: RichText(
+        text: getPageView(page),
+      ),
     );
   }
 }
@@ -184,7 +210,7 @@ class TextPage {
   final int startLine;
   final int endLine;
   final int paragraphCount;
-  final double height;
+  final int height;
   final bool shouldJustifyHeight;
   TextPage(this.startLine, this.endLine, this.height, this.paragraphCount,
       [this.shouldJustifyHeight = true]);

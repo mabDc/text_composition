@@ -2482,5 +2482,7 @@ http://www.lightnovel.cn<br />
     .replaceAll(" ", "")
     .split("\n")
     .where((e) => e.isNotEmpty)
-    .map((e) => "[开始]$e[结束]")
+    .map((e) => "[开始${++_paragraph}]$e[结束$_paragraph]")
     .toList();
+
+var _paragraph = 0;
