@@ -1,4 +1,6 @@
-final first_chapter = '''第一卷 黄昏之星龙咆哮&nbsp;&nbsp;一卷全<br/>翻譯:zomaryu<br />
+final first_chapter = ["开始之前 图片测试",'''<img src="https://scpic.chinaz.net/files/pic/pic9/202102/bpic22549.jpg">''']
++
+'''第一卷 黄昏之星龙咆哮&nbsp;&nbsp;一卷全<br/>翻譯:zomaryu<br />
 http://www.lightnovel.cn<br />
 序章<br />
 &ldquo;公主不见了？&rdquo;<br />
@@ -2479,7 +2481,6 @@ http://www.lightnovel.cn<br />
     .replaceAll("&nbsp;", " ")
     .replaceAll("&ldquo;", "“")
     .replaceAll("&rdquo;", "”")
-    .replaceAll(" ", "")
     .split("\n")
     .where((e) => e.isNotEmpty)
     .map((e) => "[开始${++_paragraph}]$e[结束$_paragraph]")

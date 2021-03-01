@@ -1,5 +1,6 @@
 library text_composition;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// * 暂不支持图片
@@ -41,6 +42,11 @@ class TextComposition {
   List<TextLine> get lines => _lines;
   int get lineCount => _lines.length;
 
+  final Pattern? linkPattern;
+  final TextStyle? linkStyle;
+  final String Function(String s)? linkText;
+  final void Function(String s)? onLinkTap;
+
   /// * 文本排版
   /// * 两端对齐
   /// * 底栏对齐
@@ -65,6 +71,10 @@ class TextComposition {
     required this.boxHeight,
     this.paragraph = 10,
     this.shouldJustifyHeight = true,
+    this.linkPattern,
+    this.linkStyle,
+    this.linkText,
+    this.onLinkTap,
   }) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
@@ -85,7 +95,7 @@ class TextComposition {
     var pageHeight = 0;
     var startLine = 0;
 
-    /// 下一页
+    /// 下一页 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
     void newPage() {
       _pages.add(TextPage(startLine, lines.length, pageHeight, paragraphCount));
       paragraphCount = 0;
@@ -93,40 +103,48 @@ class TextComposition {
       startLine = lines.length;
     }
 
-    for (var p in _paragraphs) {
-      while (true) {
-        pageHeight += _height;
-        tp.text = TextSpan(text: p, style: style);
-        tp.layout(maxWidth: boxWidth);
-        final textCount = tp.getPositionForOffset(offset).offset;
-        if (p.length == textCount) {
-          lines.add(TextLine(
-              text: p,
-              textCount: textCount,
-              width: tp.width,
-              shouldJustifyWidth: tp.width > _boxWidth));
-          if (pageHeight > _boxHeight2) {
-            newPage();
-          } else {
-            pageHeight += paragraph;
-            lines.add(TextLine(paragraphGap: true));
-            paragraphCount++;
-          }
-          break;
-        } else {
-          lines.add(TextLine(
-              text: p.substring(0, textCount),
-              textCount: textCount,
-              width: tp.width,
-              shouldJustifyWidth: true));
-          p = p.substring(textCount);
-        }
-
-        /// 段落结束 跳出循环 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
-        if (pageHeight > _boxHeight) {
-          newPage();
-        }
+    /// 新段落
+    void newParagraph() {
+      if (pageHeight > _boxHeight2) {
+        newPage();
+      } else {
+        pageHeight += paragraph;
+        lines.add(TextLine(paragraphGap: true));
+        paragraphCount++;
       }
+    }
+
+    for (var p in _paragraphs) {
+      if (linkPattern != null && p.startsWith(linkPattern!)) {
+        pageHeight += _height;
+        lines.add(TextLine(text: p, link: true));
+        newParagraph();
+      } else
+        while (true) {
+          pageHeight += _height;
+          tp.text = TextSpan(text: p, style: style);
+          tp.layout(maxWidth: boxWidth);
+          final textCount = tp.getPositionForOffset(offset).offset;
+          if (p.length == textCount) {
+            lines.add(TextLine(
+                text: p,
+                textCount: textCount,
+                width: tp.width,
+                shouldJustifyWidth: tp.width > _boxWidth));
+            newParagraph();
+            break;
+          } else {
+            lines.add(TextLine(
+                text: p.substring(0, textCount),
+                textCount: textCount,
+                width: tp.width,
+                shouldJustifyWidth: true));
+            p = p.substring(textCount);
+          }
+          if (pageHeight > _boxHeight) {
+            newPage();
+          }
+        }
     }
     if (lines.length > startLine) {
       _pages.add(TextPage(startLine, lines.length, pageHeight, paragraphCount, false));
@@ -158,6 +176,13 @@ class TextComposition {
     }
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     return lines.sublist(page.startLine, page.endLine).map((line) {
+      if (line.link) {
+        return TextSpan(
+          text: "${linkText?.call(line.text) ?? line.text}",
+          style: linkStyle,
+          recognizer: TapGestureRecognizer()..onTap = () => onLinkTap?.call(line.text),
+        );
+      }
       if (line.paragraphGap) {
         /// restJustifyHeight趋于0
         if (restJustifyHeight-- > 0) {
@@ -211,10 +236,12 @@ class TextLine {
   final double width;
   final bool paragraphGap;
   final bool shouldJustifyWidth;
+  final bool link;
   TextLine({
     this.text = "",
     this.textCount = 0,
     this.width = 0,
+    this.link = false,
     this.paragraphGap = false,
     this.shouldJustifyWidth = false,
   });

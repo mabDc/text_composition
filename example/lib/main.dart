@@ -79,6 +79,15 @@ class _SettingState extends State<Setting> {
                 boxWidth: pwidth / ratio - 30,
                 boxHeight: pheight / ratio,
                 shouldJustifyHeight: shouldJustifyHeight,
+                linkPattern: "<img",
+                linkText: (s) => RegExp('src=".*/([^/]+)"').firstMatch(s)?.group(1)??"链接",
+                linkStyle: TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic),
+                onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (BuildContext context) => Scaffold(
+                      appBar: AppBar(),
+                          body: Image.network(
+                              s.substring(s.indexOf("src=\"")+5, s.lastIndexOf("\""))),
+                        ))),
               );
               end = DateTime.now();
               setState(() {});
