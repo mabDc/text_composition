@@ -71,8 +71,10 @@ class _SettingState extends State<Setting> {
               start = DateTime.now();
               tc = TextComposition(
                 paragraphs: first_chapter,
-                size: double.tryParse(size.text) ?? 16.0,
-                height: double.tryParse(height.text) ?? 1.55,
+                style: TextStyle(
+                  fontSize: double.tryParse(size.text),
+                  height: double.tryParse(height.text),
+                ),
                 paragraph: int.tryParse(paragraph.text) ?? 10,
                 boxWidth: pwidth / ratio - 30,
                 boxHeight: pheight / ratio,
@@ -93,7 +95,8 @@ class _SettingState extends State<Setting> {
                 Navigator.of(context)
                     .push(MaterialPageRoute(
                         builder: (BuildContext context) => Page(tc: tc!)))
-                    .then((value) => SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
+                    .then((value) =>
+                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
               }
             },
           ),

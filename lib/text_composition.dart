@@ -22,14 +22,8 @@ class TextComposition {
   /// 容器高度
   final double boxHeight;
 
-  /// 字号
-  final double size;
-
-  /// 字体
-  final String? family;
-
-  /// 行高
-  final double height;
+  /// 字体样式
+  final TextStyle? style;
 
   /// 段间距
   late final int paragraph;
@@ -56,6 +50,7 @@ class TextComposition {
   /// * [paragraphs] 待渲染文本内容 已经预处理: 不重新计算空行 不重新缩进
   /// * [paragraphs] 为空时使用[text], 否则忽略[text],
   /// * [size] 字号
+  /// * [style] 字体样式 字号 行高 字体
   /// * [height] 行高
   /// * [family] 字体
   /// * [boxWidth] 容器宽度
@@ -65,9 +60,7 @@ class TextComposition {
   TextComposition({
     List<String>? paragraphs,
     this.text,
-    this.size = 16.0,
-    this.height = 1.55,
-    this.family,
+    this.style,
     required this.boxWidth,
     required this.boxHeight,
     this.paragraph = 10,
@@ -80,9 +73,10 @@ class TextComposition {
     /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset`
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
-    final style = TextStyle(fontSize: size, fontFamily: family, height: height);
+    final size = style?.fontSize ?? 14;
+    final height = style?.height ?? 1.0;
     // final _height = size * height; //这个结果不行
-    final _height = (size * height).ceil(); //pixel用整数 向上取整就对了
+    final _height = (size * height).ceil(); //pixel用整数 向下取整就对了
     final _boxHeight = boxHeight - _height;
     final _boxHeight2 = _boxHeight - paragraph;
     final _boxWidth = boxWidth - size;
@@ -139,7 +133,7 @@ class TextComposition {
     }
   }
 
-  TextSpan getLineView(TextLine line, TextPainter tp, TextStyle style) {
+  TextSpan getLineView(TextLine line, TextPainter tp) {
     if (line.textCount == 0) return TextSpan(text: "\n \n");
     if (line.shouldJustifyWidth) {
       tp.text = TextSpan(text: line.text, style: style);
@@ -162,18 +156,13 @@ class TextComposition {
       restJustifyHeight = rest % page.paragraphCount;
       paragraphJustifyHeight += rest ~/ page.paragraphCount;
     }
-    final style = TextStyle(
-      height: height,
-      fontSize: size,
-      fontFamily: family,
-    );
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     return TextSpan(
       style: style,
       children: lines.sublist(page.startLine, page.endLine).map((line) {
         if (line.paragraphGap) {
           /// restJustifyHeight趋于0
-          if (restJustifyHeight-->0) {
+          if (restJustifyHeight-- > 0) {
             return TextSpan(
               text: "\n \n",
               style: TextStyle(
@@ -190,7 +179,7 @@ class TextComposition {
             ),
           );
         }
-        return getLineView(line, tp, style);
+        return getLineView(line, tp);
       }).toList(),
     );
   }
