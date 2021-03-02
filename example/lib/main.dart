@@ -6,6 +6,11 @@ import 'package:text_composition/text_composition.dart';
 
 import 'first_chapter.dart';
 
+
+///
+/// 调试时修改162行查看详细的布局输出和绘图方式
+/// `tc.getPageWidget(tc.pages[index], true, true/false),`
+///
 main(List<String> args) {
   runApp(MaterialApp(home: Setting()));
 }
@@ -70,7 +75,6 @@ class _SettingState extends State<Setting> {
             onPressed: () {
               start = DateTime.now();
               tc = TextComposition(
-                debug: true,
                 paragraphs: first_chapter,
                 style: TextStyle(
                   fontFamily: "jiali",
@@ -155,7 +159,7 @@ class Page extends StatelessWidget {
                 )),
                 Column(
                   children: [
-                    tc.getPageWidget(tc.pages[index]),
+                    tc.getPageWidget(tc.pages[index], false, false),
                     Container(
                       height: 20,
                       width: tc.boxWidth,

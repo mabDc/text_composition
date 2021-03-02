@@ -47,8 +47,6 @@ class TextComposition {
   final String Function(String s)? linkText;
   final void Function(String s)? onLinkTap;
 
-  final bool debug;
-
   /// * 文本排版
   /// * 两端对齐
   /// * 底栏对齐
@@ -77,7 +75,6 @@ class TextComposition {
     this.linkStyle,
     this.linkText,
     this.onLinkTap,
-    this.debug = false,
   }) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
@@ -87,9 +84,13 @@ class TextComposition {
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     final offset = Offset(boxWidth, 1);
     final size = style?.fontSize ?? 14;
-    final height = style?.height ?? 1.0;
-    // final _height = size * height; //这个结果不行
-    final _height = (size * height).round(); //pixel用整数 向下取整就对了
+    final _height = (TextPainter(
+      text: TextSpan(text: "高度", style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout())
+        .height
+        .toInt();
     final _boxHeight = boxHeight - _height;
     final _boxHeight2 = _boxHeight - paragraph;
     final _boxWidth = boxWidth - size;
@@ -209,20 +210,77 @@ class TextComposition {
     }).toList();
   }
 
-  Widget getPageWidget(TextPage page) {
+  Widget getPageWidget(TextPage page, [bool debug = false, bool useCanvas = false]) {
     final ts = TextSpan(style: style, children: getPageSpans(page));
+    
     if (debug) {
+      var paragraphJustifyHeight = paragraph;
+      var restJustifyHeight = 0;
+      if (shouldJustifyHeight && page.shouldJustifyHeight) {
+        final rest = boxHeight.ceil() - page.height;
+        restJustifyHeight = rest % page.paragraphCount;
+        paragraphJustifyHeight += rest ~/ page.paragraphCount;
+      }
+      print("****** 一页开始 ******");
+      print("序号 预期 实际 内容");
       final tp = TextPainter(text: ts, textDirection: TextDirection.ltr);
-      tp.layout(maxWidth: boxWidth);
-      final text = ts.toPlainText();
-      print("[一页开始] ${text.substring(0, 10)}...${text.substring(text.length - 10)} [一页结束]");
-      print("page.height ${page.height} boxHeight $boxHeight tp.height ${tp.height}");
+      var pageHeight = 0;
+      for (var i = page.startLine; i < page.endLine; i++) {
+        tp.maxLines = i + 1;
+        tp.layout(maxWidth: boxWidth);
+        final line = lines[i];
+        final height = (TextPainter(
+          text: TextSpan(text: "高度", style: style),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout())
+            .height
+            .round();
+        if (line.paragraphGap) {
+          if (restJustifyHeight-- > 0) {
+            pageHeight += paragraphJustifyHeight + 1;
+          } else {
+            pageHeight += paragraphJustifyHeight;
+          }
+        } else {
+          pageHeight += height;
+        }
+        print("$i $pageHeight ${tp.height.toInt()} ${line.text}");
+      }
+      print("****** 一页结束 ******");
     }
+
+    if (useCanvas) {
+      final tp = TextPainter(text: ts, textDirection: TextDirection.ltr);
+      tp.maxLines = null;
+      tp.layout(maxWidth: boxWidth);
+      return Container(
+        width: boxWidth,
+        height: boxHeight,
+        child: CustomPaint(painter: TextPainterPainter(tp)),
+      );
+    }
+
     return Container(
       width: boxWidth,
       height: boxHeight,
       child: RichText(text: ts),
     );
+  }
+}
+
+class TextPainterPainter extends CustomPainter {
+  final TextPainter tp;
+  TextPainterPainter(this.tp);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    tp.paint(canvas, Offset.zero);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter old) {
+    return false;
   }
 }
 
