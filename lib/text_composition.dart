@@ -47,6 +47,8 @@ class TextComposition {
   final String Function(String s)? linkText;
   final void Function(String s)? onLinkTap;
 
+  final bool debug;
+
   /// * 文本排版
   /// * 两端对齐
   /// * 底栏对齐
@@ -75,6 +77,7 @@ class TextComposition {
     this.linkStyle,
     this.linkText,
     this.onLinkTap,
+    this.debug = false,
   }) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
@@ -86,7 +89,7 @@ class TextComposition {
     final size = style?.fontSize ?? 14;
     final height = style?.height ?? 1.0;
     // final _height = size * height; //这个结果不行
-    final _height = (size * height).ceil(); //pixel用整数 向下取整就对了
+    final _height = (size * height).round(); //pixel用整数 向下取整就对了
     final _boxHeight = boxHeight - _height;
     final _boxHeight2 = _boxHeight - paragraph;
     final _boxWidth = boxWidth - size;
@@ -207,15 +210,18 @@ class TextComposition {
   }
 
   Widget getPageWidget(TextPage page) {
+    final ts = TextSpan(style: style, children: getPageSpans(page));
+    if (debug) {
+      final tp = TextPainter(text: ts, textDirection: TextDirection.ltr);
+      tp.layout(maxWidth: boxWidth);
+      final text = ts.toPlainText();
+      print("[一页开始] ${text.substring(0, 10)}...${text.substring(text.length - 10)} [一页结束]");
+      print("page.height ${page.height} boxHeight $boxHeight tp.height ${tp.height}");
+    }
     return Container(
       width: boxWidth,
       height: boxHeight,
-      child: RichText(
-        text: TextSpan(
-          style: style,
-          children: getPageSpans(page),
-        ),
-      ),
+      child: RichText(text: ts),
     );
   }
 }

@@ -70,23 +70,27 @@ class _SettingState extends State<Setting> {
             onPressed: () {
               start = DateTime.now();
               tc = TextComposition(
+                debug: true,
                 paragraphs: first_chapter,
                 style: TextStyle(
+                  fontFamily: "jiali",
                   fontSize: double.tryParse(size.text),
                   height: double.tryParse(height.text),
                 ),
                 paragraph: int.tryParse(paragraph.text) ?? 10,
-                boxWidth: pwidth / ratio - 30,
-                boxHeight: pheight / ratio,
+                boxWidth: pwidth / ratio - 20,
+                boxHeight: pheight / ratio - 20,
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
-                linkText: (s) => RegExp('src=".*/([^/]+)"').firstMatch(s)?.group(1)??"链接",
-                linkStyle: TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic),
+                linkText: (s) =>
+                    RegExp('src=".*/([^/]+)"').firstMatch(s)?.group(1) ?? "链接",
+                linkStyle: TextStyle(
+                    color: Colors.cyan, fontStyle: FontStyle.italic, fontFamily: "jiali"),
                 onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
                     builder: (BuildContext context) => Scaffold(
-                      appBar: AppBar(),
+                          appBar: AppBar(),
                           body: Image.network(
-                              s.substring(s.indexOf("src=\"")+5, s.lastIndexOf("\""))),
+                              s.substring(s.indexOf("src=\"") + 5, s.lastIndexOf("\""))),
                         ))),
               );
               end = DateTime.now();
@@ -124,36 +128,42 @@ class Page extends StatelessWidget {
     SystemChrome.setEnabledSystemUIOverlays([]);
     final style = TextStyle(color: Colors.white);
     return Scaffold(
-      body: ListView.separated(
-        separatorBuilder: (context, index) => Container(
-          height: 20,
-          color: Colors.teal,
-          child: Text("页数 ${index + 1} / ${tc.pageCount}", style: style),
-        ),
+      body: ListView.builder(
+        scrollDirection: Axis.horizontal,
         itemCount: tc.pageCount,
         itemBuilder: (BuildContext context, int index) {
           return Container(
-            height: tc.boxHeight,
+            height: tc.boxHeight + 20,
             color: Colors.deepPurple,
-            width: tc.boxWidth + 30,
+            width: tc.boxWidth + 20,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                     children: List.generate(
-                  tc.boxHeight ~/ 20,
+                  tc.boxHeight ~/ 10 + 2,
                   (index) => Container(
-                    height: 20,
-                    width: 30,
-                    color: Colors.primaries[index % Colors.primaries.length],
+                    height: 10,
+                    width: 20,
+                    color: index % 2 == 0 ?null : Colors.cyan ,
                     child: Text(
-                      ((index + 1) * 20).toString(),
+                      index % 2 == 0 ? "" : ((index + 1) * 10).toString() ,
                       textAlign: TextAlign.end,
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.white, fontSize: 8),
                     ),
                   ),
                 )),
-                tc.getPageWidget(tc.pages[index]),
+                Column(
+                  children: [
+                    tc.getPageWidget(tc.pages[index]),
+                    Container(
+                      height: 20,
+                      width: tc.boxWidth,
+                      color: Colors.teal,
+                      child: Text("页数 ${index + 1} / ${tc.pageCount}", style: style),
+                    ),
+                  ],
+                ),
               ],
             ),
           );
