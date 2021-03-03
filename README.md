@@ -22,7 +22,7 @@ flutter 中文排版 分页 上下对齐 两端对齐
 
 使用canvas绘图 不受字体影响 任意字体都可以上下对齐 两端对齐
 
-`windows`自带字体效果
+`windows`自带字体效果（非等宽 非等高）
 
 ![image](https://user-images.githubusercontent.com/19526331/109809275-145a4980-7c63-11eb-8d5e-f3a8047b54f8.png)
 
