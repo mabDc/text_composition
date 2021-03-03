@@ -127,9 +127,6 @@ class TextComposition {
     }
 
     for (var p in _paragraphs) {
-      if (pageCount == 11) {
-        final _ = "debug";
-      }
       if (linkPattern != null && p.startsWith(linkPattern!)) {
         tp.text = TextSpan(text: p, style: linkStyle);
         tp.layout();
@@ -168,6 +165,49 @@ class TextComposition {
     }
   }
 
+void paint(TextPage page, Canvas canvas, Size size, [bool debugPrint = false]) {
+    if (debugPrint)
+      print("****** [TextComposition paint start] [${DateTime.now()}] ******");
+    var justify = 0.0;
+    if (shouldJustifyHeight && page.shouldJustifyHeight) {
+      justify = (boxSize.height - page.height) / (page.endLine - page.startLine);
+    }
+    final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
+    if (page.isTitlePage) {
+      tp.text = TextSpan(text: title, style: titleStyle);
+      tp.layout();
+      tp.paint(canvas, Offset.zero);
+    }
+    for (var i = 0, end = page.endLine - page.startLine; i < end; i++) {
+      final line = lines[i + page.startLine];
+      if (line.text.isEmpty) {
+        continue;
+      } else if (line.link) {
+        tp.text = TextSpan(
+          text: linkText?.call(line.text) ?? line.text,
+          style: linkStyle,
+        );
+      } else if (line.shouldJustifyWidth) {
+        tp.text = TextSpan(text: line.text, style: style);
+        tp.layout();
+        tp.text = TextSpan(
+          text: line.text,
+          style: style?.copyWith(
+            letterSpacing: (boxSize.width - tp.width) / line.text.length,
+          ),
+        );
+      } else {
+        tp.text = TextSpan(text: line.text, style: style);
+      }
+      final offset = Offset(0, line.height + justify * i);
+      if (debugPrint) print("$offset ${line.text}");
+      tp.layout();
+      tp.paint(canvas, offset);
+    }
+    if (debugPrint)
+      print("****** [TextComposition paint end  ] [${DateTime.now()}] ******");
+  }
+
   /// [debug] 查看时间输出
   Widget getPageWidget(TextPage page, [bool debugPrint = false]) {
     final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
@@ -187,47 +227,7 @@ class PagePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (debugPrint)
-      print("****** [TextComposition paint start] [${DateTime.now()}] ******");
-    var justify = 0.0;
-    if (textComposition.shouldJustifyHeight && page.shouldJustifyHeight) {
-      justify = (textComposition.boxSize.height - page.height) /
-          (page.endLine - page.startLine);
-    }
-    final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
-    if (page.isTitlePage) {
-      tp.text = TextSpan(text: textComposition.title, style: textComposition.titleStyle);
-      tp.layout();
-      tp.paint(canvas, Offset.zero);
-    }
-    for (var i = 0, end = page.endLine - page.startLine; i < end; i++) {
-      final line = textComposition.lines[i + page.startLine];
-      if (line.text.isEmpty) {
-        continue;
-      } else if (line.link) {
-        tp.text = TextSpan(
-          text: textComposition.linkText?.call(line.text) ?? line.text,
-          style: textComposition.linkStyle,
-        );
-      } else if (line.shouldJustifyWidth) {
-        tp.text = TextSpan(text: line.text, style: textComposition.style);
-        tp.layout();
-        tp.text = TextSpan(
-          text: line.text,
-          style: textComposition.style?.copyWith(
-            letterSpacing: (textComposition.boxSize.width - tp.width) / line.text.length,
-          ),
-        );
-      } else {
-        tp.text = TextSpan(text: line.text, style: textComposition.style);
-      }
-      final offset = Offset(0, line.height + justify * i);
-      if (debugPrint) print("$offset ${line.text}");
-      tp.layout();
-      tp.paint(canvas, offset);
-    }
-    if (debugPrint)
-      print("****** [TextComposition paint end  ] [${DateTime.now()}] ******");
+    textComposition.paint(page, canvas, size, debugPrint);
   }
 
   @override
