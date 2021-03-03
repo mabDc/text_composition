@@ -23,8 +23,3 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-flutter:
-  fonts:
-    - family: jiali
-      fonts:
-        - asset: 腾祥嘉丽.ttf

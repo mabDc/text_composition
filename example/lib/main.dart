@@ -6,10 +6,11 @@ import 'package:text_composition/text_composition.dart';
 
 import 'first_chapter.dart';
 
-
 ///
-/// 调试时修改162行查看详细的布局输出和绘图方式
-/// `tc.getPageWidget(tc.pages[index], true, true/false),`
+/// 调试时修改161行
+/// * [useCanvas] 绘图方式（canvas/richText） [debug] 查看详细的布局输出
+/// * 等宽字体 时 `richText`和`canvas`结果一致
+/// * 非等宽字体 使用`canvas`才能两端对齐 [useCanvas] 应设为 [true]
 ///
 main(List<String> args) {
   runApp(MaterialApp(home: Setting()));
@@ -23,7 +24,10 @@ class Setting extends StatefulWidget {
 }
 
 class _SettingState extends State<Setting> {
-  var size = TextEditingController(text: '16'),
+  var pwidth = window.physicalSize.width,
+      pheight = window.physicalSize.height,
+      ratio = window.devicePixelRatio,
+      size = TextEditingController(text: '16'),
       height = TextEditingController(text: '1.55'),
       paragraph = TextEditingController(text: '10'),
       shouldJustifyHeight = true,
@@ -32,19 +36,12 @@ class _SettingState extends State<Setting> {
   TextComposition? tc;
   @override
   Widget build(BuildContext context) {
-    final pwidth = window.physicalSize.width;
-    final pheight = window.physicalSize.height;
-    final ratio = window.devicePixelRatio;
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.all(30),
         children: [
           Text("width / ratio: $pwidth / $ratio = ${pwidth / ratio}"),
           Text("height / ratio: $pheight / $ratio = ${pheight / ratio}"),
-          OutlinedButton(
-            child: Text("重新获取屏幕大小"),
-            onPressed: () => setState(() {}),
-          ),
           TextField(
             decoration: InputDecoration(labelText: "字号 size"),
             controller: size,
@@ -73,11 +70,13 @@ class _SettingState extends State<Setting> {
           OutlinedButton(
             child: Text("开始或重新排版"),
             onPressed: () {
+              pwidth = window.physicalSize.width;
+              pheight = window.physicalSize.height;
+              ratio = window.devicePixelRatio;
               start = DateTime.now();
               tc = TextComposition(
                 paragraphs: first_chapter,
                 style: TextStyle(
-                  fontFamily: "jiali",
                   fontSize: double.tryParse(size.text),
                   height: double.tryParse(height.text),
                 ),
@@ -88,8 +87,7 @@ class _SettingState extends State<Setting> {
                 linkPattern: "<img",
                 linkText: (s) =>
                     RegExp('src=".*/([^/]+)"').firstMatch(s)?.group(1) ?? "链接",
-                linkStyle: TextStyle(
-                    color: Colors.cyan, fontStyle: FontStyle.italic, fontFamily: "jiali"),
+                linkStyle: TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic),
                 onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
                     builder: (BuildContext context) => Scaffold(
                           appBar: AppBar(),
@@ -144,22 +142,23 @@ class Page extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
-                    children: List.generate(
-                  tc.boxHeight ~/ 10 + 2,
-                  (index) => Container(
-                    height: 10,
-                    width: 20,
-                    color: index % 2 == 0 ?null : Colors.cyan ,
-                    child: Text(
-                      index % 2 == 0 ? "" : ((index + 1) * 10).toString() ,
-                      textAlign: TextAlign.end,
-                      style: TextStyle(color: Colors.white, fontSize: 8),
+                  children: List.generate(
+                    tc.boxHeight ~/ 10 + 2,
+                    (index) => Container(
+                      height: 10,
+                      width: 20,
+                      color: index % 2 == 0 ? null : Colors.cyan,
+                      child: Text(
+                        index % 2 == 0 ? "" : ((index + 1) * 10).toString(),
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: Colors.white, fontSize: 10, height: 1),
+                      ),
                     ),
                   ),
-                )),
+                ),
                 Column(
                   children: [
-                    tc.getPageWidget(tc.pages[index], false, false),
+                    tc.getPageWidget(tc.pages[index], true, false),
                     Container(
                       height: 20,
                       width: tc.boxWidth,
