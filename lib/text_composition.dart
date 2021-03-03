@@ -33,7 +33,7 @@ class TextComposition {
   final bool shouldJustifyHeight;
 
   /// 段间距
-  late final int paragraph;
+  late final double paragraph;
 
   /// 每一页内容
   late final List<TextPage> _pages;
@@ -48,7 +48,8 @@ class TextComposition {
   final Pattern? linkPattern;
   final TextStyle? linkStyle;
   final String Function(String s)? linkText;
-  final void Function(String s)? onLinkTap;
+  // canvas 点击事件不生效
+  // final void Function(String s)? onLinkTap;
 
   /// * 文本排版
   /// * 两端对齐
@@ -62,8 +63,9 @@ class TextComposition {
   /// * [title] 标题
   /// * [titleStyle] 标题样式
   /// * [boxSize] 容器大小
-  /// * [paragraph] 段间距 对齐到整数像素
+  /// * [paragraph] 段间距
   /// * [shouldJustifyHeight] 是否底栏对齐
+  /// * onLinkTap canvas 点击事件不生效
   TextComposition({
     List<String>? paragraphs,
     this.text,
@@ -71,12 +73,12 @@ class TextComposition {
     this.title,
     this.titleStyle,
     required this.boxSize,
-    this.paragraph = 10,
+    this.paragraph = 10.0,
     this.shouldJustifyHeight = true,
     this.linkPattern,
     this.linkStyle,
     this.linkText,
-    this.onLinkTap,
+    // this.onLinkTap,
   }) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
@@ -167,8 +169,8 @@ class TextComposition {
   }
 
   /// [debug] 查看时间输出
-  Widget getPageWidget(TextPage page, [bool debug = false]) {
-    final child = CustomPaint(painter: PagePainter(this, page, debug));
+  Widget getPageWidget(TextPage page, [bool debugPrint = false]) {
+    final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
     return Container(
       width: boxSize.width,
       height: boxSize.height,
@@ -180,65 +182,52 @@ class TextComposition {
 class PagePainter extends CustomPainter {
   final TextComposition textComposition;
   final TextPage page;
-  final bool debug;
-  PagePainter(this.textComposition, this.page, this.debug);
+  final bool debugPrint;
+  PagePainter(this.textComposition, this.page, this.debugPrint);
 
   @override
   void paint(Canvas canvas, Size size) {
-    print("****** [TextComposition paint start] [${DateTime.now()}] ******");
-    var rest = 0;
-    var justify = 0;
+    if (debugPrint)
+      print("****** [TextComposition paint start] [${DateTime.now()}] ******");
+    var justify = 0.0;
     if (textComposition.shouldJustifyHeight && page.shouldJustifyHeight) {
-      final restJustify = textComposition.boxSize.height.floor() - page.height.floor();
-      justify = restJustify ~/ (page.endLine - page.startLine);
-      rest = restJustify % (page.endLine - page.startLine);
-      if (debug) {
-        print(
-            "page.height ${page.height} restJustify $restJustify justify $justify rest $rest");
-      }
+      justify = (textComposition.boxSize.height - page.height) /
+          (page.endLine - page.startLine);
     }
-
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     if (page.isTitlePage) {
       tp.text = TextSpan(text: textComposition.title, style: textComposition.titleStyle);
       tp.layout();
       tp.paint(canvas, Offset.zero);
     }
-    for (var i = page.startLine, justifyHeight = 0; i < page.endLine; i++) {
-      final line = textComposition.lines[i];
+    for (var i = 0, end = page.endLine - page.startLine; i < end; i++) {
+      final line = textComposition.lines[i + page.startLine];
       if (line.text.isEmpty) {
         continue;
+      } else if (line.link) {
+        tp.text = TextSpan(
+          text: textComposition.linkText?.call(line.text) ?? line.text,
+          style: textComposition.linkStyle,
+        );
       } else if (line.shouldJustifyWidth) {
         tp.text = TextSpan(text: line.text, style: textComposition.style);
         tp.layout();
         tp.text = TextSpan(
           text: line.text,
           style: textComposition.style?.copyWith(
-            letterSpacing:
-                (textComposition.boxSize.width - tp.width) / line.text.length,
+            letterSpacing: (textComposition.boxSize.width - tp.width) / line.text.length,
           ),
         );
       } else {
         tp.text = TextSpan(text: line.text, style: textComposition.style);
       }
-      if (rest > 0) {
-        if (rest > justifyHeight) {
-          justifyHeight++;
-        }
-      } else {
-        if (rest < justifyHeight) {
-          justifyHeight--;
-        }
-      }
-      justifyHeight += justify;
-      final offset = Offset(0, line.height + justifyHeight);
-      if (debug) {
-        print("$offset ${line.text}");
-      }
+      final offset = Offset(0, line.height + justify * i);
+      if (debugPrint) print("$offset ${line.text}");
       tp.layout();
       tp.paint(canvas, offset);
     }
-    print("****** [TextComposition paint end  ] [${DateTime.now()}] ******");
+    if (debugPrint)
+      print("****** [TextComposition paint end  ] [${DateTime.now()}] ******");
   }
 
   @override

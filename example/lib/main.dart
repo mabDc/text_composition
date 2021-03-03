@@ -73,7 +73,7 @@ class _SettingState extends State<Setting> {
                 ),
                 title: "烙印纹章 第一卷 一卷全",
                 titleStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, height: 2),
-                paragraph: int.tryParse(paragraph.text) ?? 10,
+                paragraph: double.tryParse(paragraph.text) ?? 10.0,
                 boxSize: physicalSize / ratio + Offset(-20, -20),
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
@@ -85,12 +85,12 @@ class _SettingState extends State<Setting> {
                   fontSize: double.tryParse(size.text),
                   height: double.tryParse(height.text),
                 ),
-                onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (BuildContext context) => Scaffold(
-                          appBar: AppBar(),
-                          body: Image.network(
-                              RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
-                        ))),
+                // onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
+                //     builder: (BuildContext context) => Scaffold(
+                //           appBar: AppBar(),
+                //           body: Image.network(
+                //               RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
+                //         ))),
               );
               end = DateTime.now();
               setState(() {});
