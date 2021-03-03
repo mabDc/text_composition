@@ -1,14 +1,12 @@
 # text_composition
 
-A new Flutter package project.
+flutter 中文排版，支持分页上下对齐 两端对齐
 
-## Getting Started
+## demo
 
-This project is a starting point for a Dart
-[package](https://flutter.dev/developing-packages/),
-a library module containing code that can be shared easily across
-multiple Flutter or Dart projects.
+`/example/lib/main.dart`
 
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.dev/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+![E3Z@FG25IXJ)I 6Y1(HDD$W](https://user-images.githubusercontent.com/19526331/109742072-5b1b5580-7c09-11eb-81d1-04e692424d35.png)
+
+
+![$}C 5XZ6BHL_3X}HCSXHPGV](https://user-images.githubusercontent.com/19526331/109742094-666e8100-7c09-11eb-9c97-979a70c7222a.png)
