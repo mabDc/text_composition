@@ -5,6 +5,8 @@ flutter 中文排版 分页 上下对齐 两端对齐
 ## 特点
 
 - [x] 中文英文符号混排两端对齐
+- [x] 支持非等高字体
+- [x] 支持非等宽字体
 - [x] 按容器高度分页
 - [x] 上下分散对齐
 - [x] 支持标题`title`与样式`titleStyle`
@@ -22,6 +24,7 @@ flutter 中文排版 分页 上下对齐 两端对齐
 
 `windows`自带字体效果
 
+![image](https://user-images.githubusercontent.com/19526331/109809275-145a4980-7c63-11eb-8d5e-f3a8047b54f8.png)
 
 
 `腾祥嘉丽.ttf`字体效果
