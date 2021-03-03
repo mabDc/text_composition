@@ -6,12 +6,6 @@ import 'package:text_composition/text_composition.dart';
 
 import 'first_chapter.dart';
 
-///
-/// 调试时修改`tc.getPageWidget(tc.pages[index], true, true),`
-/// * [useCanvas] 绘图方式（canvas/richText） [debug] 查看详细的布局输出
-/// * 等宽字体 时 `richText`和`canvas`结果一致
-/// * 非等宽字体 使用`canvas`才能两端对齐 [useCanvas] 应设为 [true]
-///
 main(List<String> args) {
   runApp(MaterialApp(home: Setting()));
 }
@@ -24,8 +18,7 @@ class Setting extends StatefulWidget {
 }
 
 class _SettingState extends State<Setting> {
-  var pwidth = window.physicalSize.width,
-      pheight = window.physicalSize.height,
+  var physicalSize = window.physicalSize,
       ratio = window.devicePixelRatio,
       size = TextEditingController(text: '16'),
       height = TextEditingController(text: '1.55'),
@@ -40,8 +33,7 @@ class _SettingState extends State<Setting> {
       body: ListView(
         padding: EdgeInsets.all(30),
         children: [
-          Text("width / ratio: $pwidth / $ratio = ${pwidth / ratio}"),
-          Text("height / ratio: $pheight / $ratio = ${pheight / ratio}"),
+          Text("physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
           TextField(
             decoration: InputDecoration(labelText: "字号 size"),
             controller: size,
@@ -70,8 +62,7 @@ class _SettingState extends State<Setting> {
           OutlinedButton(
             child: Text("开始或重新排版"),
             onPressed: () {
-              pwidth = window.physicalSize.width;
-              pheight = window.physicalSize.height;
+              physicalSize = window.physicalSize;
               ratio = window.devicePixelRatio;
               start = DateTime.now();
               tc = TextComposition(
@@ -80,9 +71,10 @@ class _SettingState extends State<Setting> {
                   fontSize: double.tryParse(size.text),
                   height: double.tryParse(height.text),
                 ),
+                title: "烙印纹章 第一卷 一卷全",
+                titleStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, height: 2),
                 paragraph: int.tryParse(paragraph.text) ?? 10,
-                boxWidth: pwidth / ratio - 20,
-                boxHeight: pheight / ratio - 20,
+                boxSize: physicalSize / ratio + Offset(-20, -20),
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
                 linkText: (s) =>
@@ -140,15 +132,15 @@ class Page extends StatelessWidget {
         itemCount: tc.pageCount,
         itemBuilder: (BuildContext context, int index) {
           return Container(
-            height: tc.boxHeight + 20,
+            height: tc.boxSize.height + 20,
             color: Colors.deepPurple,
-            width: tc.boxWidth + 20,
+            width: tc.boxSize.width + 20,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   children: List.generate(
-                    tc.boxHeight ~/ 10 + 2,
+                    tc.boxSize.height ~/ 10 + 2,
                     (index) => Container(
                       height: 10,
                       width: 20,
@@ -163,10 +155,11 @@ class Page extends StatelessWidget {
                 ),
                 Column(
                   children: [
-                    tc.getPageWidget(tc.pages[index], true, true),
+                    // 第二个参数为true可以做
+                    tc.getPageWidget(tc.pages[index], true),
                     Container(
                       height: 20,
-                      width: tc.boxWidth,
+                      width: tc.boxSize.width,
                       color: Colors.teal,
                       child: Text("页数 ${index + 1} / ${tc.pageCount}", style: style),
                     ),
