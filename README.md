@@ -2,7 +2,7 @@
 
 flutter 中文排版，支持分页上下对齐 两端对齐
 
-## demo
+## example
 
 `/example/lib/main.dart`
 
