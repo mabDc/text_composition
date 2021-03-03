@@ -7,7 +7,7 @@ import 'package:text_composition/text_composition.dart';
 import 'first_chapter.dart';
 
 ///
-/// 调试时修改161行
+/// 调试时修改`tc.getPageWidget(tc.pages[index], true, true),`
 /// * [useCanvas] 绘图方式（canvas/richText） [debug] 查看详细的布局输出
 /// * 等宽字体 时 `richText`和`canvas`结果一致
 /// * 非等宽字体 使用`canvas`才能两端对齐 [useCanvas] 应设为 [true]
@@ -86,13 +86,18 @@ class _SettingState extends State<Setting> {
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
                 linkText: (s) =>
-                    RegExp('src=".*/([^/]+)"').firstMatch(s)?.group(1) ?? "链接",
-                linkStyle: TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic),
+                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
+                linkStyle: TextStyle(
+                  color: Colors.cyan,
+                  fontStyle: FontStyle.italic,
+                  fontSize: double.tryParse(size.text),
+                  height: double.tryParse(height.text),
+                ),
                 onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
                     builder: (BuildContext context) => Scaffold(
                           appBar: AppBar(),
                           body: Image.network(
-                              s.substring(s.indexOf("src=\"") + 5, s.lastIndexOf("\""))),
+                              RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
                         ))),
               );
               end = DateTime.now();
@@ -158,7 +163,7 @@ class Page extends StatelessWidget {
                 ),
                 Column(
                   children: [
-                    tc.getPageWidget(tc.pages[index], true, false),
+                    tc.getPageWidget(tc.pages[index], true, true),
                     Container(
                       height: 20,
                       width: tc.boxWidth,

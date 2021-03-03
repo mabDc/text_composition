@@ -112,6 +112,8 @@ class TextComposition {
 
     for (var p in _paragraphs) {
       if (linkPattern != null && p.startsWith(linkPattern!)) {
+        tp.text = TextSpan(text: p, style: linkStyle);
+        tp.layout();
         pageHeight += tp.height;
         lines.add(TextLine(text: p, link: true));
         newParagraph();
@@ -123,7 +125,10 @@ class TextComposition {
           final textCount = tp.getPositionForOffset(offset).offset;
           if (p.length == textCount) {
             lines.add(TextLine(
-                text: p, width: tp.width, shouldJustifyWidth: tp.width > _boxWidth));
+              text: p,
+              width: tp.width,
+              shouldJustifyWidth: tp.width > _boxWidth,
+            ));
             newParagraph();
             break;
           } else {
@@ -200,12 +205,22 @@ class TextComposition {
 
   /// * [useCanvas] 绘图方式（canvas/richText） [debug] 查看详细的布局输出
   /// * 等宽字体 时 `richText`和`canvas`结果一致
-  /// * 非等宽字体 使用`canvas`才能两端对齐 [useCanvas] 应设为 [true] 
+  /// * 非等宽字体 使用`canvas`才能两端对齐 [useCanvas] 应设为 [true]
   Widget getPageWidget(TextPage page, [bool useCanvas = true, bool debug = false]) {
     print("****** [TextComposition page start] [${DateTime.now()}] ******");
     final ts = TextSpan(style: style, children: getPageSpans(page));
-    
+
     if (debug) {
+      var paragraphJustifyHeight = paragraph.toDouble();
+      var restJustifyHeight = 0;
+      if (shouldJustifyHeight && page.shouldJustifyHeight) {
+        final rest = boxHeight.floor() - page.height.floor();
+        restJustifyHeight = rest % page.paragraphCount;
+        paragraphJustifyHeight += rest ~/ page.paragraphCount;
+      }
+      print(
+          "paragraphJustifyHeight $paragraphJustifyHeight restJustifyHeight $restJustifyHeight");
+
       final tp = TextPainter(text: ts, textDirection: TextDirection.ltr);
       var lastLineHeight = 0;
       print("序号 行高 累计 宽度 内容");
