@@ -24,8 +24,7 @@ flutter 中文排版 分页 上下对齐 两端对齐
 
 `windows`自带字体效果（非等宽 非等高）
 
-![image](https://user-images.githubusercontent.com/19526331/109809275-145a4980-7c63-11eb-8d5e-f3a8047b54f8.png)
-
+![F2HM52VH3OK$V46@_KR20 4](https://user-images.githubusercontent.com/19526331/109810327-5df76400-7c64-11eb-9bd2-23642ef0061a.png)
 
 `腾祥嘉丽.ttf`字体效果
 
