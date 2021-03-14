@@ -165,13 +165,12 @@ class TextComposition {
     }
   }
 
-void paint(TextPage page, Canvas canvas, Size size, [bool debugPrint = false]) {
+  void paint(TextPage page, Canvas canvas, Size size, [bool debugPrint = false]) {
     if (debugPrint)
       print("****** [TextComposition paint start] [${DateTime.now()}] ******");
-    var justify = 0.0;
-    if (shouldJustifyHeight && page.shouldJustifyHeight) {
-      justify = (boxSize.height - page.height) / (page.endLine - page.startLine);
-    }
+    final justify = shouldJustifyHeight && page.shouldJustifyHeight
+        ? (boxSize.height - page.height) / (page.endLine - page.startLine)
+        : 0.0;
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     if (page.isTitlePage) {
       tp.text = TextSpan(text: title, style: titleStyle);
@@ -213,7 +212,7 @@ void paint(TextPage page, Canvas canvas, Size size, [bool debugPrint = false]) {
     final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
     return Container(
       width: boxSize.width,
-      height: boxSize.height,
+      height: page.height < boxSize.height ? page.height : boxSize.height,
       child: child,
     );
   }

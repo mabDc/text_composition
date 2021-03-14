@@ -72,7 +72,7 @@ class _SettingState extends State<Setting> {
                   height: double.tryParse(height.text),
                 ),
                 title: "烙印纹章 第一卷 一卷全",
-                titleStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, height: 2),
+                titleStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: double.tryParse(size.text), height: 2),
                 paragraph: double.tryParse(paragraph.text) ?? 10.0,
                 boxSize: physicalSize / ratio + Offset(-20, -20),
                 shouldJustifyHeight: shouldJustifyHeight,
@@ -146,7 +146,7 @@ class Page extends StatelessWidget {
                       width: 20,
                       color: index % 2 == 0 ? null : Colors.cyan,
                       child: Text(
-                        index % 2 == 0 ? "" : ((index + 1) * 10).toString(),
+                        index % 2 == 0 ? "" : (index * 10).toString(),
                         textAlign: TextAlign.end,
                         style: TextStyle(color: Colors.white, fontSize: 10, height: 1),
                       ),
