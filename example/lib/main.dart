@@ -156,7 +156,7 @@ class Page extends StatelessWidget {
                 Column(
                   children: [
                     // 第二个参数为true可以做
-                    tc.getPageWidget(tc.pages[index], true),
+                    tc.getPageWidget(pageIndex: index, debugPrint: true),
                     Container(
                       height: 20,
                       width: tc.boxSize.width,
