@@ -120,7 +120,7 @@ class TextComposition {
     var startLine = 0;
 
     /// 下一页 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
-    void newPage([bool shouldJustifyHeight = true]) {
+    void newPage([bool shouldJustifyHeight = true, bool lastPage = false]) {
       if (shouldJustifyHeight && this.shouldJustifyHeight) {
         final len = lines.length - startLine;
         double justify = (boxSize.height - pageHeight) / (len - 1);
@@ -129,7 +129,7 @@ class TextComposition {
         }
       }
 
-      if (columnNum == columnCount) {
+      if (columnNum == columnCount || lastPage) {
         columnNum = 1;
         dx = 0;
         _pages.add(TextPage(lines, pageHeight, isTitlePage));
@@ -195,7 +195,7 @@ class TextComposition {
         }
     }
     if (lines.isNotEmpty) {
-      newPage(false);
+      newPage(false, true);
     }
   }
 
@@ -243,7 +243,13 @@ class TextComposition {
 
   /// [debug] 查看时间输出
   Widget getPageWidget({TextPage? page, bool debugPrint = false, int? pageIndex}) {
-    if (page == null) page = pages[pageIndex!];
+    if (page == null) {
+      if(pageIndex! < pageCount){
+        page = pages[pageIndex];
+      }else{
+        return Container();
+      }
+    }
     final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
     return Container(
       color: debugPrint ? Colors.cyan : null,
