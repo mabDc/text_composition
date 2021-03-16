@@ -1,6 +1,6 @@
 # text_composition
 
-flutter 中文排版 分页 上下对齐 两端对齐
+flutter 中文排版 分页 上下对齐 两端对齐 多栏布局
 
 弃用richText，使用Canvas，精确定位绘图位置，消除字体对排版影响
 
@@ -11,6 +11,7 @@ flutter 中文排版 分页 上下对齐 两端对齐
 - [x] 支持非等宽字体
 - [x] 按容器高度分页
 - [x] 上下分散对齐
+- [x] 多栏布局
 - [x] 支持标题`title`与样式`titleStyle`
 - [x] 支持链接`link`和样式`linkStyle`
 - [ ] `link`点击事件
