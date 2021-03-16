@@ -91,7 +91,7 @@ class TextComposition {
   }) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
-    columnWidth = boxSize.width - (columnCount - 1) * columnGap;
+    columnWidth = (boxSize.width - (columnCount - 1) * columnGap) / columnCount;
 
     /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset`
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
@@ -106,10 +106,9 @@ class TextComposition {
     var isTitlePage = false;
 
     if (title != null && title!.isNotEmpty) {
-      tp
-        ..maxLines = null
-        ..text = TextSpan(text: title, style: titleStyle)
-        ..layout(maxWidth: columnWidth);
+      tp.maxLines = null;
+      tp.text = TextSpan(text: title, style: titleStyle);
+      tp.layout(maxWidth: columnWidth);
       pageHeight += tp.height + paragraph;
       tp.maxLines = 1;
       isTitlePage = true;
@@ -118,35 +117,31 @@ class TextComposition {
     var lines = <TextLine>[];
     var columnNum = 1;
     var dx = 0.0;
+    var startLine = 0;
 
     /// 下一页 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
     void newPage([bool shouldJustifyHeight = true]) {
+      if (shouldJustifyHeight && this.shouldJustifyHeight) {
+        final len = lines.length - startLine;
+        double justify = (boxSize.height - pageHeight) / (len - 1);
+        for (var i = 0; i < len; i++) {
+          lines[i + startLine].justifyDy(justify * i);
+        }
+      }
+      
       if (columnNum == columnCount) {
         columnNum = 1;
         dx = 0;
-        if (shouldJustifyHeight && this.shouldJustifyHeight) {
-          double justify = (boxSize.height - pageHeight) / lines.length;
-          int i = -1;
-          _pages.add(TextPage(
-              lines.map((line) {
-                i++;
-                return line.apply(dy: line.dy + justify * i);
-              }).toList(),
-              pageHeight,
-              isTitlePage));
-          lines.clear();
-        } else {
-          _pages.add(TextPage(lines, pageHeight, isTitlePage));
-          lines = <TextLine>[];
-        }
-        pageHeight = 0;
-        if (isTitlePage) isTitlePage = false;
+        _pages.add(TextPage(lines, pageHeight, isTitlePage));
+        lines = <TextLine>[];
       } else {
         columnNum++;
-        pageHeight = 0;
         dx += columnWidth + columnGap;
-        if (isTitlePage) isTitlePage = false;
       }
+
+      startLine = lines.length;
+      pageHeight = 0;
+      if (isTitlePage) isTitlePage = false;
     }
 
     /// 新段落
@@ -251,6 +246,7 @@ class TextComposition {
     if (page == null) page = pages[pageIndex!];
     final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
     return Container(
+      color: Colors.cyan,
       width: boxSize.width,
       height: boxSize.height.isInfinite ? page.height : boxSize.height,
       child: child,
@@ -290,34 +286,18 @@ class TextLine {
   final bool link;
   final String text;
   final double dx;
-  final double dy;
+  double _dy;
+  double get dy => _dy;
   final bool shouldJustifyWidth;
-  const TextLine({
+  TextLine({
     this.link = false,
     required this.dx,
-    required this.dy,
+    required double dy,
     required this.text,
     this.shouldJustifyWidth = false,
-  });
+  }) : _dy = dy;
 
-  TextLine apply({
-    bool? link,
-    String? text,
-    double? dx,
-    double? dy,
-    bool? shouldJustifyWidth,
-  }) {
-    if (link == null) link = this.link;
-    if (text == null) text = this.text;
-    if (dx == null) dx = this.dx;
-    if (dy == null) dy = this.dy;
-    if (shouldJustifyWidth == null) shouldJustifyWidth = this.shouldJustifyWidth;
-    return TextLine(
-      link: link,
-      dx: dx,
-      dy: dy,
-      text: text,
-      shouldJustifyWidth: shouldJustifyWidth,
-    );
+  justifyDy(double offsetDy){
+    _dy += offsetDy;
   }
 }
