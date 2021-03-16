@@ -133,6 +133,7 @@ class TextComposition {
         columnNum = 1;
         dx = 0;
         _pages.add(TextPage(lines, pageHeight, isTitlePage));
+        if (isTitlePage) isTitlePage = false;
         lines = <TextLine>[];
       } else {
         columnNum++;
@@ -141,7 +142,6 @@ class TextComposition {
 
       startLine = lines.length;
       pageHeight = 0;
-      if (isTitlePage) isTitlePage = false;
     }
 
     /// 新段落
