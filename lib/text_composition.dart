@@ -128,7 +128,7 @@ class TextComposition {
           lines[i + startLine].justifyDy(justify * i);
         }
       }
-      
+
       if (columnNum == columnCount) {
         columnNum = 1;
         dx = 0;
@@ -246,7 +246,7 @@ class TextComposition {
     if (page == null) page = pages[pageIndex!];
     final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
     return Container(
-      color: Colors.cyan,
+      color: debugPrint ? Colors.cyan : null,
       width: boxSize.width,
       height: boxSize.height.isInfinite ? page.height : boxSize.height,
       child: child,
@@ -297,7 +297,7 @@ class TextLine {
     this.shouldJustifyWidth = false,
   }) : _dy = dy;
 
-  justifyDy(double offsetDy){
+  justifyDy(double offsetDy) {
     _dy += offsetDy;
   }
 }
