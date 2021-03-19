@@ -32,7 +32,8 @@ class TextComposition {
   final TextStyle style;
 
   /// 标题
-  final String? title;
+  String? _title;
+  String? get title => _title;
 
   /// 标题样式
   final TextStyle? titleStyle;
@@ -87,7 +88,7 @@ class TextComposition {
     List<String>? paragraphs,
     this.text,
     required this.style,
-    this.title,
+    String? title,
     this.titleStyle,
     Size? boxSize,
     this.margin,
@@ -105,12 +106,13 @@ class TextComposition {
   }) {
     this.boxSize =
         boxSize ?? ui.window.physicalSize / ui.window.devicePixelRatio;
-    parse(paragraphs, text);
+    parse(paragraphs, text, title);
   }
 
-  void parse(List<String>? paragraphs, String? text) {
+  void parse(List<String>? paragraphs, String? text, String? title) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
+    _title = title;
 
     final padding = this.padding ?? EdgeInsets.zero;
     final margin = this.margin ?? EdgeInsets.zero;
@@ -135,9 +137,9 @@ class TextComposition {
     var pageHeight = 0.0;
     var isTitlePage = false;
 
-    if (title != null && title!.isNotEmpty) {
+    if (_title != null && _title!.isNotEmpty) {
       tp.maxLines = null;
-      tp.text = TextSpan(text: title, style: titleStyle);
+      tp.text = TextSpan(text: _title, style: titleStyle);
       tp.layout(maxWidth: columnWidth);
       pageHeight += tp.height + paragraph;
       tp.maxLines = 1;
@@ -239,7 +241,7 @@ class TextComposition {
     final lineCount = page.lines.length;
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
     if (page.isTitlePage) {
-      tp.text = TextSpan(text: title, style: titleStyle);
+      tp.text = TextSpan(text: _title, style: titleStyle);
       tp.maxLines = null;
       tp.layout(maxWidth: columnWidth);
       tp.paint(canvas, Offset.zero);
@@ -371,11 +373,12 @@ class TCPage extends StatelessWidget {
   final int currentPage;
   final FutureOr<bool> Function(bool next)? loadChapter;
   final void Function()? toggleMenu;
-  TCPage(this.textComposition,
+
+  const TCPage(this.textComposition,
       [this.currentPage = 0, this.loadChapter, this.toggleMenu]);
 
-  nextPage(BuildContext context, int type, bool next) async {
-    var page = next ? currentPage + 1 : currentPage - 1;
+  nextPage(BuildContext context, int type, bool next, [int? page]) async {
+    page ??= next ? currentPage + 1 : currentPage - 1;
     if (page < 0) {
       print("已经是第一页");
       final r = await loadChapter?.call(next);
@@ -388,12 +391,83 @@ class TCPage extends StatelessWidget {
       page = 0;
     }
     Navigator.pushReplacement(
-        context,
-        _CSCustomRouter(
-          TCPage(textComposition, page),
-          type,
-          next,
-        ));
+        context, createRoute(TCPage(textComposition, page), type, next));
+  }
+
+  Route createRoute(Widget child, int type, bool next) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black45, //底色,阴影颜色
+              offset: Offset(0, 0), //阴影位置,从什么位置开始
+              blurRadius: 2, // 阴影模糊层度
+              spreadRadius: 2, //阴影模糊大小
+            ),
+            BoxShadow(
+              color: Colors.black87, //底色,阴影颜色
+              offset: Offset(0, 0), //阴影位置,从什么位置开始
+              blurRadius: 2, // 阴影模糊层度
+              spreadRadius: 2, //阴影模糊大小
+            ),
+            BoxShadow(
+              color: Colors.black45, //底色,阴影颜色
+              offset: Offset(0, 0), //阴影位置,从什么位置开始
+              blurRadius: 2, // 阴影模糊层度
+              spreadRadius: 2, //阴影模糊大小
+            ),
+          ],
+        ),
+        child: child,
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        switch (type) {
+          case TCPage.SLIDEHorizontal:
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(next ? 1.0 : -1.0, 0),
+                end: Offset(0.0, 0.0),
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.fastOutSlowIn,
+              )),
+              child: child,
+            );
+          case TCPage.SLIDEVertical:
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(0, next ? 1.0 : -1.0),
+                end: Offset(0.0, 0.0),
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.fastOutSlowIn,
+              )),
+              child: child,
+            );
+          case TCPage.NONE:
+            return child;
+          case TCPage.FADE:
+            return FadeTransition(
+              opacity:
+                  Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.fastLinearToSlowEaseIn,
+              )),
+              child: child,
+            );
+          default:
+            return FadeTransition(
+              opacity:
+                  Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.fastLinearToSlowEaseIn,
+              )),
+              child: child,
+            );
+        }
+      },
+    );
   }
 
   @override
@@ -447,22 +521,18 @@ class TCPage extends StatelessWidget {
                 event.data is RawKeyEventDataWindows) {
               final logicalKey = event.data.logicalKey;
               print(logicalKey);
-              if (logicalKey == LogicalKeyboardKey.arrowUp ||
-                  logicalKey == LogicalKeyboardKey.arrowLeft ||
-                  logicalKey == LogicalKeyboardKey.pageUp) {
-                nextPage(context, TCPage.NONE, false);
-              } else if (logicalKey == LogicalKeyboardKey.arrowDown ||
-                  logicalKey == LogicalKeyboardKey.arrowRight ||
-                  logicalKey == LogicalKeyboardKey.pageDown) {
-                nextPage(context, TCPage.NONE, true);
-              } else if (logicalKey == LogicalKeyboardKey.bracketLeft ||
-                  logicalKey == LogicalKeyboardKey.minus ||
-                  logicalKey == LogicalKeyboardKey.insert) {
-                loadChapter?.call(false);
-              } else if (logicalKey == LogicalKeyboardKey.bracketRight ||
-                  logicalKey == LogicalKeyboardKey.numpadAdd ||
-                  logicalKey == LogicalKeyboardKey.delete) {
-                loadChapter?.call(true);
+              if (logicalKey == LogicalKeyboardKey.arrowUp) {
+                nextPage(context, TCPage.SLIDEVertical, false);
+              } else if (logicalKey == LogicalKeyboardKey.arrowLeft) {
+                nextPage(context, TCPage.SLIDEHorizontal, false);
+              } else if (logicalKey == LogicalKeyboardKey.arrowDown) {
+                nextPage(context, TCPage.SLIDEVertical, true);
+              } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
+                nextPage(context, TCPage.SLIDEHorizontal, true);
+              } else if (logicalKey == LogicalKeyboardKey.home) {
+                nextPage(context, TCPage.FADE, false, 0);
+              } else if (logicalKey == LogicalKeyboardKey.end) {
+                nextPage(context, TCPage.FADE, false, textComposition.pageCount - 1);
               } else if (logicalKey == LogicalKeyboardKey.enter ||
                   logicalKey == LogicalKeyboardKey.numpadEnter) {
                 toggleMenu?.call();
@@ -475,70 +545,5 @@ class TCPage extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _CSCustomRouter extends PageRouteBuilder {
-  final Widget child;
-  final bool next;
-  final int type;
-
-  _CSCustomRouter(this.child, this.type, this.next)
-      : super(
-          transitionDuration: Duration(milliseconds: 200),
-          pageBuilder: (BuildContext context, Animation<double> animation1,
-                  Animation<double> animation2) =>
-              child,
-        );
-
-  @override
-  Widget buildTransitions(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    switch (type) {
-      case TCPage.SLIDEHorizontal:
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(next ? 1.0 : -1.0, 0),
-            end: Offset(0.0, 0.0),
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.fastOutSlowIn,
-          )),
-          child: child,
-        );
-      case TCPage.SLIDEVertical:
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(0, next ? 1.0 : -1.0),
-            end: Offset(0.0, 0.0),
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.fastOutSlowIn,
-          )),
-          child: child,
-        );
-      case TCPage.NONE:
-        return child;
-      case TCPage.FADE:
-        return FadeTransition(
-          opacity: Tween<double>(begin: 0.0, end: 1).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.fastLinearToSlowEaseIn,
-          )),
-          child: child,
-        );
-      default:
-        return FadeTransition(
-          opacity: Tween<double>(begin: 0.0, end: 1).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.fastLinearToSlowEaseIn,
-          )),
-          child: child,
-        );
-    }
   }
 }
