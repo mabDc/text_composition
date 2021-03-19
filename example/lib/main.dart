@@ -26,14 +26,15 @@ class _SettingState extends State<Setting> {
       shouldJustifyHeight = true,
       start = DateTime.now(),
       end = DateTime.now();
-  TextComposition? tc;
+  TextComposition? textComposition;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.all(30),
         children: [
-          Text("physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
+          Text(
+              "physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
           TextField(
             decoration: InputDecoration(labelText: "字号 size"),
             controller: size,
@@ -65,20 +66,36 @@ class _SettingState extends State<Setting> {
               physicalSize = window.physicalSize;
               ratio = window.devicePixelRatio;
               start = DateTime.now();
-              tc = TextComposition(
+              textComposition = TextComposition(
                 paragraphs: first_chapter,
                 style: TextStyle(
+                  color: Colors.black87,
                   fontSize: double.tryParse(size.text),
                   height: double.tryParse(height.text),
                 ),
                 title: "烙印纹章 第一卷 一卷全",
-                titleStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: double.tryParse(size.text), height: 2),
+                titleStyle: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: double.tryParse(size.text),
+                  height: 2,
+                ),
                 paragraph: double.tryParse(paragraph.text) ?? 10.0,
-                boxSize: physicalSize / ratio + Offset(-20, -20),
+                padding: EdgeInsets.all(10),
+                buildFooter: (
+                    {TextPage? page,
+                    int? pageIndex}) {
+                  return Text(
+                    "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
+                    style: TextStyle(fontSize: 12),
+                  );
+                },
+                footerHeight: 24,
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
                 linkText: (s) =>
-                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
+                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ??
+                    "链接",
                 linkStyle: TextStyle(
                   color: Colors.cyan,
                   fontStyle: FontStyle.italic,
@@ -96,19 +113,39 @@ class _SettingState extends State<Setting> {
               setState(() {});
             },
           ),
+          SizedBox(height: 10,),
           OutlinedButton(
-            child: Text("预览"),
-            onPressed: () {
-              if (tc == null) {
+            child: Text("预览 翻页"),
+            onPressed: () async {
+              if (textComposition == null) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('先排版才能预览'),
                 ));
               } else {
+                await SystemChrome.setEnabledSystemUIOverlays([]);
                 Navigator.of(context)
                     .push(MaterialPageRoute(
-                        builder: (BuildContext context) => Page(tc: tc!)))
-                    .then((value) =>
-                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
+                        builder: (BuildContext context) => TCPage(textComposition!)))
+                    .then((value) => SystemChrome.setEnabledSystemUIOverlays(
+                        SystemUiOverlay.values));
+              }
+            },
+          ),
+          SizedBox(height: 10,),
+          OutlinedButton(
+            child: Text("预览 水平排列"),
+            onPressed: () async {
+              if (textComposition == null) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('先排版才能预览'),
+                ));
+              } else {
+                await SystemChrome.setEnabledSystemUIOverlays([]);
+                Navigator.of(context)
+                    .push(MaterialPageRoute(
+                    builder: (BuildContext context) => PageListView(textComposition:textComposition!)))
+                    .then((value) => SystemChrome.setEnabledSystemUIOverlays(
+                    SystemUiOverlay.values));
               }
             },
           ),
@@ -118,56 +155,37 @@ class _SettingState extends State<Setting> {
   }
 }
 
-class Page extends StatelessWidget {
-  final TextComposition tc;
-  const Page({required this.tc, Key? key}) : super(key: key);
+class PageListView extends StatelessWidget {
+  final TextComposition textComposition;
+  const PageListView({required this.textComposition, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setEnabledSystemUIOverlays([]);
-    final style = TextStyle(color: Colors.white);
     return Scaffold(
-      body: ListView.builder(
+      body: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: tc.pageCount,
-        itemBuilder: (BuildContext context, int index) {
-          return Container(
-            height: tc.boxSize.height + 20,
-            color: Colors.deepPurple,
-            width: tc.boxSize.width + 20,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: List.generate(
-                    tc.boxSize.height ~/ 10 + 2,
-                    (index) => Container(
-                      height: 10,
-                      width: 20,
-                      color: index % 2 == 0 ? null : Colors.cyan,
-                      child: Text(
-                        index % 2 == 0 ? "" : (index * 10).toString(),
-                        textAlign: TextAlign.end,
-                        style: TextStyle(color: Colors.white, fontSize: 10, height: 1),
-                      ),
-                    ),
-                  ),
+        itemCount: textComposition.pageCount,
+        separatorBuilder: (BuildContext context, int index) {
+          return Column(
+            children: List.generate(
+              textComposition.boxSize.height ~/ 10,
+                  (index) => Container(
+                height: 10,
+                width: 20,
+                color: index % 2 == 0 ? null : Colors.cyan,
+                child: Text(
+                  index % 2 == 0 ? "" : (index * 10).toString(),
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 10, height: 1),
                 ),
-                Column(
-                  children: [
-                    // 第二个参数为true可以做
-                    tc.getPageWidget(pageIndex: index, debugPrint: true),
-                    Container(
-                      height: 20,
-                      width: tc.boxSize.width,
-                      color: Colors.teal,
-                      child: Text("页数 ${index + 1} / ${tc.pageCount}", style: style),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           );
+        },
+        itemBuilder: (BuildContext context, int index) {
+          return textComposition.getPageWidget(pageIndex: index, debugPrint: true);
         },
       ),
     );

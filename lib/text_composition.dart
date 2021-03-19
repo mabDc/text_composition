@@ -1,7 +1,12 @@
 // @dart = 2.12
 library text_composition;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+
+import 'package:flutter/services.dart';
 
 /// * 暂不支持图片
 /// * 文本排版
@@ -18,7 +23,7 @@ class TextComposition {
   List<String> get paragraphs => _paragraphs;
 
   /// 容器大小
-  final Size boxSize;
+  late final Size boxSize;
 
   /// 单栏宽度
   late final double columnWidth;
@@ -52,6 +57,11 @@ class TextComposition {
   final Pattern? linkPattern;
   final TextStyle? linkStyle;
   final String Function(String s)? linkText;
+
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
+  final Widget Function({int? pageIndex, TextPage? page})? buildFooter;
+  final double footerHeight;
   // canvas 点击事件不生效
   // final void Function(String s)? onLinkTap;
 
@@ -79,7 +89,11 @@ class TextComposition {
     required this.style,
     this.title,
     this.titleStyle,
-    required this.boxSize,
+    Size? boxSize,
+    this.margin,
+    this.padding,
+    this.buildFooter,
+    this.footerHeight = 0.0,
     this.paragraph = 10.0,
     this.shouldJustifyHeight = true,
     this.columnCount = 1,
@@ -89,9 +103,25 @@ class TextComposition {
     this.linkText,
     // this.onLinkTap,
   }) {
+    this.boxSize =
+        boxSize ?? ui.window.physicalSize / ui.window.devicePixelRatio;
+    parse(paragraphs, text);
+  }
+
+  void parse(List<String>? paragraphs, String? text) {
     _paragraphs = paragraphs ?? text?.split("\n") ?? <String>[];
     _pages = <TextPage>[];
-    columnWidth = (boxSize.width - (columnCount - 1) * columnGap) / columnCount;
+
+    final padding = this.padding ?? EdgeInsets.zero;
+    final margin = this.margin ?? EdgeInsets.zero;
+    final innerSize = Size(
+        this.boxSize.width - padding.horizontal - margin.horizontal,
+        this.boxSize.height -
+            padding.vertical -
+            margin.vertical -
+            footerHeight);
+    columnWidth =
+        (innerSize.width - (columnCount - 1) * columnGap) / columnCount;
 
     /// [tp] 只有一行的`TextPainter` [offset] 只有一行的`offset`
     final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
@@ -100,7 +130,7 @@ class TextComposition {
     // [_boxWidth] 仅用于判断段尾是否需要调整 [size] 准确性不重要
     final _boxWidth = columnWidth - size;
     // [_boxHeight] 仅用作判断容纳下一行依据 [_height] 是否实际行高不重要
-    final _boxHeight = boxSize.height - size * (style.height ?? 1.0);
+    final _boxHeight = innerSize.height - size * (style.height ?? 1.0);
 
     var pageHeight = 0.0;
     var isTitlePage = false;
@@ -123,7 +153,7 @@ class TextComposition {
     void newPage([bool shouldJustifyHeight = true, bool lastPage = false]) {
       if (shouldJustifyHeight && this.shouldJustifyHeight) {
         final len = lines.length - startLine;
-        double justify = (boxSize.height - pageHeight) / (len - 1);
+        double justify = (innerSize.height - pageHeight) / (len - 1);
         for (var i = 0; i < len; i++) {
           lines[i + startLine].justifyDy(justify * i);
         }
@@ -197,9 +227,13 @@ class TextComposition {
     if (lines.isNotEmpty) {
       newPage(false, true);
     }
+    if (pageCount == 0) {
+      _pages.add(TextPage([], 0, false));
+    }
   }
 
-  void paint(TextPage page, Canvas canvas, Size size, [bool debugPrint = false]) {
+  void paint(TextPage page, Canvas canvas, Size size,
+      [bool debugPrint = false]) {
     if (debugPrint)
       print("****** [TextComposition paint start] [${DateTime.now()}] ******");
     final lineCount = page.lines.length;
@@ -242,20 +276,32 @@ class TextComposition {
   }
 
   /// [debug] 查看时间输出
-  Widget getPageWidget({TextPage? page, bool debugPrint = false, int? pageIndex}) {
+  Widget getPageWidget(
+      {TextPage? page, bool debugPrint = false, int? pageIndex}) {
     if (page == null) {
-      if(pageIndex! < pageCount){
+      if (pageIndex! < pageCount) {
         page = pages[pageIndex];
-      }else{
+      } else {
         return Container();
       }
     }
-    final child = CustomPaint(painter: PagePainter(this, page, debugPrint));
-    return Container(
-      color: debugPrint ? Colors.cyan : null,
-      width: boxSize.width,
-      height: boxSize.height.isInfinite ? page.height : boxSize.height,
-      child: child,
+
+    return Column(
+      children: [
+        Container(
+          padding: padding,
+          margin: margin,
+          width: boxSize.width,
+          height: boxSize.height.isInfinite
+              ? page.height
+              : boxSize.height - footerHeight,
+          child: CustomPaint(painter: PagePainter(this, page, debugPrint)),
+        ),
+        Container(
+          height: footerHeight,
+          child: buildFooter?.call(page: page, pageIndex: pageIndex),
+        ),
+      ],
     );
   }
 }
@@ -305,5 +351,194 @@ class TextLine {
 
   justifyDy(double offsetDy) {
     _dy += offsetDy;
+  }
+}
+
+class TCPage extends StatelessWidget {
+  /// 无动画
+  static const NONE = 0;
+
+  /// 渐变 淡入
+  static const FADE = 1;
+
+  /// 滑动
+  static const SLIDEHorizontal = 2;
+
+  /// 滑动上下
+  static const SLIDEVertical = 3;
+
+  final TextComposition textComposition;
+  final int currentPage;
+  final FutureOr<bool> Function(bool next)? loadChapter;
+  final void Function()? toggleMenu;
+  TCPage(this.textComposition,
+      [this.currentPage = 0, this.loadChapter, this.toggleMenu]);
+
+  nextPage(BuildContext context, int type, bool next) async {
+    var page = next ? currentPage + 1 : currentPage - 1;
+    if (page < 0) {
+      print("已经是第一页");
+      final r = await loadChapter?.call(next);
+      if (r != true) return;
+      page = textComposition.pageCount - 1;
+    } else if (page >= textComposition.pageCount) {
+      print("已经是最后一页");
+      final r = await loadChapter?.call(next);
+      if (r != true) return;
+      page = 0;
+    }
+    Navigator.pushReplacement(
+        context,
+        _CSCustomRouter(
+          TCPage(textComposition, page),
+          type,
+          next,
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: GestureDetector(
+        onVerticalDragEnd: (DragEndDetails details) {
+          final v = details.primaryVelocity ?? 0;
+          if (v > 0) {
+            nextPage(context, SLIDEVertical, false);
+          } else if (v < 0) {
+            nextPage(context, SLIDEVertical, true);
+          }
+        },
+        onHorizontalDragEnd: (DragEndDetails details) {
+          final v = details.primaryVelocity ?? 0;
+          if (v > 0) {
+            nextPage(context, SLIDEHorizontal, false);
+          } else if (v < 0) {
+            nextPage(context, SLIDEHorizontal, true);
+          }
+        },
+        onTapUp: (TapUpDetails details) {
+          final size = MediaQuery.of(context).size;
+          final _centerL = size.width * (1 / 3);
+          final _centerR = size.width - _centerL;
+          final _centerT = size.height * (1 / 3);
+          final _centerB = size.height - _centerT;
+
+          if (details.globalPosition.dx > _centerL &&
+              details.globalPosition.dx < _centerR &&
+              details.globalPosition.dy > _centerT &&
+              details.globalPosition.dy < _centerB) {
+            toggleMenu?.call();
+          } else {
+            if (details.globalPosition.dx < size.width * 0.5 &&
+                details.globalPosition.dy < size.height * 0.5) {
+              nextPage(context, FADE, false);
+            } else {
+              nextPage(context, FADE, true);
+            }
+          }
+        },
+        child: RawKeyboardListener(
+          focusNode: new FocusNode(),
+          autofocus: true,
+          onKey: (event) {
+            if (event.runtimeType.toString() == 'RawKeyUpEvent') return;
+            if (event.data is RawKeyEventDataMacOs ||
+                event.data is RawKeyEventDataLinux ||
+                event.data is RawKeyEventDataWindows) {
+              final logicalKey = event.data.logicalKey;
+              print(logicalKey);
+              if (logicalKey == LogicalKeyboardKey.arrowUp ||
+                  logicalKey == LogicalKeyboardKey.arrowLeft ||
+                  logicalKey == LogicalKeyboardKey.pageUp) {
+                nextPage(context, TCPage.NONE, false);
+              } else if (logicalKey == LogicalKeyboardKey.arrowDown ||
+                  logicalKey == LogicalKeyboardKey.arrowRight ||
+                  logicalKey == LogicalKeyboardKey.pageDown) {
+                nextPage(context, TCPage.NONE, true);
+              } else if (logicalKey == LogicalKeyboardKey.bracketLeft ||
+                  logicalKey == LogicalKeyboardKey.minus ||
+                  logicalKey == LogicalKeyboardKey.insert) {
+                loadChapter?.call(false);
+              } else if (logicalKey == LogicalKeyboardKey.bracketRight ||
+                  logicalKey == LogicalKeyboardKey.numpadAdd ||
+                  logicalKey == LogicalKeyboardKey.delete) {
+                loadChapter?.call(true);
+              } else if (logicalKey == LogicalKeyboardKey.enter ||
+                  logicalKey == LogicalKeyboardKey.numpadEnter) {
+                toggleMenu?.call();
+              } else if (logicalKey == LogicalKeyboardKey.escape) {
+                Navigator.of(context).pop();
+              }
+            }
+          },
+          child: textComposition.getPageWidget(pageIndex: currentPage),
+        ),
+      ),
+    );
+  }
+}
+
+class _CSCustomRouter extends PageRouteBuilder {
+  final Widget child;
+  final bool next;
+  final int type;
+
+  _CSCustomRouter(this.child, this.type, this.next)
+      : super(
+          transitionDuration: Duration(milliseconds: 200),
+          pageBuilder: (BuildContext context, Animation<double> animation1,
+                  Animation<double> animation2) =>
+              child,
+        );
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    switch (type) {
+      case TCPage.SLIDEHorizontal:
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: Offset(next ? 1.0 : -1.0, 0),
+            end: Offset(0.0, 0.0),
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.fastOutSlowIn,
+          )),
+          child: child,
+        );
+      case TCPage.SLIDEVertical:
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: Offset(0, next ? 1.0 : -1.0),
+            end: Offset(0.0, 0.0),
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.fastOutSlowIn,
+          )),
+          child: child,
+        );
+      case TCPage.NONE:
+        return child;
+      case TCPage.FADE:
+        return FadeTransition(
+          opacity: Tween<double>(begin: 0.0, end: 1).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.fastLinearToSlowEaseIn,
+          )),
+          child: child,
+        );
+      default:
+        return FadeTransition(
+          opacity: Tween<double>(begin: 0.0, end: 1).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.fastLinearToSlowEaseIn,
+          )),
+          child: child,
+        );
+    }
   }
 }
