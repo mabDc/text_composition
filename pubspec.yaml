@@ -1,8 +1,8 @@
 name: text_composition
 description: A new Flutter package project.
-version: 0.0.3
-author:
-homepage:
+version: 0.0.4
+author: mabdc
+homepage: https://github.com/mabDc/text_composition
 
 environment:
   sdk: ">=2.12.0-0 <3.0.0"
