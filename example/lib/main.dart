@@ -33,8 +33,7 @@ class _SettingState extends State<Setting> {
       body: ListView(
         padding: EdgeInsets.all(30),
         children: [
-          Text(
-              "physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
+          Text("physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
           TextField(
             decoration: InputDecoration(labelText: "字号 size"),
             controller: size,
@@ -82,9 +81,7 @@ class _SettingState extends State<Setting> {
                 ),
                 paragraph: double.tryParse(paragraph.text) ?? 10.0,
                 padding: EdgeInsets.all(10),
-                buildFooter: (
-                    {TextPage? page,
-                    int? pageIndex}) {
+                buildFooter: ({TextPage? page, int? pageIndex}) {
                   return Text(
                     "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
                     style: TextStyle(fontSize: 12),
@@ -94,8 +91,7 @@ class _SettingState extends State<Setting> {
                 shouldJustifyHeight: shouldJustifyHeight,
                 linkPattern: "<img",
                 linkText: (s) =>
-                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ??
-                    "链接",
+                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
                 linkStyle: TextStyle(
                   color: Colors.cyan,
                   fontStyle: FontStyle.italic,
@@ -113,7 +109,9 @@ class _SettingState extends State<Setting> {
               setState(() {});
             },
           ),
-          SizedBox(height: 10,),
+          SizedBox(
+            height: 10,
+          ),
           OutlinedButton(
             child: Text("预览 翻页"),
             onPressed: () async {
@@ -125,13 +123,15 @@ class _SettingState extends State<Setting> {
                 await SystemChrome.setEnabledSystemUIOverlays([]);
                 Navigator.of(context)
                     .push(MaterialPageRoute(
-                        builder: (BuildContext context) => TCPage(textComposition!)))
-                    .then((value) => SystemChrome.setEnabledSystemUIOverlays(
-                        SystemUiOverlay.values));
+                        builder: (BuildContext context) => TCAutoPage(textComposition!)))
+                    .then((value) =>
+                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
               }
             },
           ),
-          SizedBox(height: 10,),
+          SizedBox(
+            height: 10,
+          ),
           OutlinedButton(
             child: Text("预览 水平排列"),
             onPressed: () async {
@@ -143,9 +143,10 @@ class _SettingState extends State<Setting> {
                 await SystemChrome.setEnabledSystemUIOverlays([]);
                 Navigator.of(context)
                     .push(MaterialPageRoute(
-                    builder: (BuildContext context) => PageListView(textComposition:textComposition!)))
-                    .then((value) => SystemChrome.setEnabledSystemUIOverlays(
-                    SystemUiOverlay.values));
+                        builder: (BuildContext context) =>
+                            PageListView(textComposition: textComposition!)))
+                    .then((value) =>
+                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
               }
             },
           ),
@@ -162,30 +163,28 @@ class PageListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setEnabledSystemUIOverlays([]);
+    final col = Column(
+      children: List.generate(
+        textComposition.boxSize.height ~/ 10,
+        (index) => Container(
+          height: 10,
+          width: 20,
+          color: index % 2 == 0 ? null : Colors.cyan,
+          child: Text(
+            index % 2 == 0 ? "" : (index * 10).toString(),
+            textAlign: TextAlign.end,
+            style: TextStyle(color: Colors.white, fontSize: 10, height: 1),
+          ),
+        ),
+      ),
+    );
     return Scaffold(
       body: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: textComposition.pageCount,
-        separatorBuilder: (BuildContext context, int index) {
-          return Column(
-            children: List.generate(
-              textComposition.boxSize.height ~/ 10,
-                  (index) => Container(
-                height: 10,
-                width: 20,
-                color: index % 2 == 0 ? null : Colors.cyan,
-                child: Text(
-                  index % 2 == 0 ? "" : (index * 10).toString(),
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                      color: Colors.white, fontSize: 10, height: 1),
-                ),
-              ),
-            ),
-          );
-        },
+        separatorBuilder: (BuildContext context, int index) => col,
         itemBuilder: (BuildContext context, int index) {
-          return textComposition.getPageWidget(pageIndex: index, debugPrint: true);
+          return textComposition.getPageWidget(pageIndex: index, debugPrint: false);
         },
       ),
     );

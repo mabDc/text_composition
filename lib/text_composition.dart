@@ -356,7 +356,10 @@ class TextLine {
   }
 }
 
-class TCPage extends StatelessWidget {
+class TCAutoPage extends StatelessWidget {
+  /// 自动
+  static const AUTO = -1;
+
   /// 无动画
   static const NONE = 0;
 
@@ -373,12 +376,17 @@ class TCPage extends StatelessWidget {
   final int currentPage;
   final FutureOr<bool> Function(bool next)? loadChapter;
   final void Function()? toggleMenu;
+  final int type;
 
-  const TCPage(this.textComposition,
-      [this.currentPage = 0, this.loadChapter, this.toggleMenu]);
+  const TCAutoPage(this.textComposition,
+      [this.currentPage = 0,
+      this.type = AUTO,
+      this.loadChapter,
+      this.toggleMenu]);
 
   nextPage(BuildContext context, int type, bool next, [int? page]) async {
     page ??= next ? currentPage + 1 : currentPage - 1;
+    if (this.type > 0) type = this.type;
     if (page < 0) {
       print("已经是第一页");
       final r = await loadChapter?.call(next);
@@ -391,7 +399,7 @@ class TCPage extends StatelessWidget {
       page = 0;
     }
     Navigator.pushReplacement(
-        context, createRoute(TCPage(textComposition, page), type, next));
+        context, createRoute(TCAutoPage(textComposition, page, type), type, next));
   }
 
   Route createRoute(Widget child, int type, bool next) {
@@ -423,10 +431,10 @@ class TCPage extends StatelessWidget {
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         switch (type) {
-          case TCPage.SLIDEHorizontal:
+          case SLIDEHorizontal:
             return SlideTransition(
               position: Tween<Offset>(
-                begin: Offset(next ? 1.0 : -1.0, 0),
+                begin: Offset(next ? 0.8 : -0.8, 0),
                 end: Offset(0.0, 0.0),
               ).animate(CurvedAnimation(
                 parent: animation,
@@ -434,10 +442,10 @@ class TCPage extends StatelessWidget {
               )),
               child: child,
             );
-          case TCPage.SLIDEVertical:
+          case SLIDEVertical:
             return SlideTransition(
               position: Tween<Offset>(
-                begin: Offset(0, next ? 1.0 : -1.0),
+                begin: Offset(0, next ? 0.8 : -0.8),
                 end: Offset(0.0, 0.0),
               ).animate(CurvedAnimation(
                 parent: animation,
@@ -445,9 +453,9 @@ class TCPage extends StatelessWidget {
               )),
               child: child,
             );
-          case TCPage.NONE:
+          case NONE:
             return child;
-          case TCPage.FADE:
+          case FADE:
             return FadeTransition(
               opacity:
                   Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
@@ -505,9 +513,9 @@ class TCPage extends StatelessWidget {
           } else {
             if (details.globalPosition.dx < size.width * 0.5 &&
                 details.globalPosition.dy < size.height * 0.5) {
-              nextPage(context, FADE, false);
+              nextPage(context, NONE, false);
             } else {
-              nextPage(context, FADE, true);
+              nextPage(context, NONE, true);
             }
           }
         },
@@ -522,17 +530,18 @@ class TCPage extends StatelessWidget {
               final logicalKey = event.data.logicalKey;
               print(logicalKey);
               if (logicalKey == LogicalKeyboardKey.arrowUp) {
-                nextPage(context, TCPage.SLIDEVertical, false);
+                nextPage(context, SLIDEVertical, false);
               } else if (logicalKey == LogicalKeyboardKey.arrowLeft) {
-                nextPage(context, TCPage.SLIDEHorizontal, false);
+                nextPage(context, SLIDEHorizontal, false);
               } else if (logicalKey == LogicalKeyboardKey.arrowDown) {
-                nextPage(context, TCPage.SLIDEVertical, true);
+                nextPage(context, SLIDEVertical, true);
               } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
-                nextPage(context, TCPage.SLIDEHorizontal, true);
+                nextPage(context, SLIDEHorizontal, true);
               } else if (logicalKey == LogicalKeyboardKey.home) {
-                nextPage(context, TCPage.FADE, false, 0);
+                nextPage(context, FADE, false, 0);
               } else if (logicalKey == LogicalKeyboardKey.end) {
-                nextPage(context, TCPage.FADE, false, textComposition.pageCount - 1);
+                nextPage(
+                    context, FADE, false, textComposition.pageCount - 1);
               } else if (logicalKey == LogicalKeyboardKey.enter ||
                   logicalKey == LogicalKeyboardKey.numpadEnter) {
                 toggleMenu?.call();
