@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:text_composition/text_composition.dart';
+import 'package:page_turn/page_turn.dart'as ori;
 
 import 'first_chapter.dart';
 
@@ -133,7 +134,27 @@ class _SettingState extends State<Setting> {
             height: 10,
           ),
           OutlinedButton(
-            child: Text("预览 仿真翻页"),
+            child: Text("预览 仿真翻页 原始版"),
+            onPressed: () async {
+              if (textComposition == null) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('先排版才能预览'),
+                ));
+              } else {
+                await SystemChrome.setEnabledSystemUIOverlays([]);
+                Navigator.of(context)
+                    .push(MaterialPageRoute(
+                    builder: (BuildContext context) => HomeScreen(textComposition: textComposition!,)))
+                    .then((value) =>
+                    SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
+              }
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          OutlinedButton(
+            child: Text("预览 仿真翻页 修改版"),
             onPressed: () async {
               if (textComposition == null) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -207,6 +228,35 @@ class PageListView extends StatelessWidget {
           return textComposition.getPageWidget(pageIndex: index, debugPrint: false);
         },
       ),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  final TextComposition textComposition;
+  const HomeScreen({
+    required this.textComposition,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _controller = GlobalKey<PageTurnState>();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: ori.PageTurn(
+        key: _controller,
+        backgroundColor: Colors.white,
+        showDragCutoff: false,
+        lastPage: Container(child: Center(child: Text('Last Page!'))),
+        children: <Widget>[
+          for (var i = 0; i < widget.textComposition.pageCount; i++) widget.textComposition.getPageWidget(pageIndex: i),
+        ],
+      )
     );
   }
 }

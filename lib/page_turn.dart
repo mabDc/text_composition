@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:page_turn/src/builders/index.dart';
@@ -67,7 +65,6 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
     _setUp();
   }
 
-  static const BLANK_PAGE = const Center();
   void _setUp() {
     _controllers.clear();
     pages.clear();
@@ -138,21 +135,18 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
 
   Future<void> nextPage() async {
     _controllers[pageNumber].reverse();
-    if (mounted) {
+    if (mounted)
       setState(() {
         pageNumber++;
       });
-    }
   }
 
   Future<void> previousPage() async {
-    if (pageNumber > 0) {
-      await _controllers[pageNumber - 1].forward();
-      if (mounted)
-        setState(() {
-          pageNumber--;
-        });
-    }
+    _controllers[pageNumber - 1].forward();
+    if (mounted)
+      setState(() {
+        pageNumber--;
+      });
   }
 
   Future<void> goToPage(int index) async {
@@ -190,7 +184,7 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
                 i++;
                 final pn = pages.length - pageNumber;
                 final ret =
-                    Offstage(offstage: !(i >= pn - 1 && i <= pn + 1), child: p);
+                    Offstage(offstage: !(i >= pn - 2 && i <= pn + 1), child: p);
                 return ret;
               }).toList(),
               Positioned.fill(

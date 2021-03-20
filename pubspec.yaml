@@ -1,6 +1,7 @@
 name: text_composition
 description: A new Flutter package project.
 version: 0.0.4
+publish_to: none
 author: mabdc
 homepage: https://github.com/mabDc/text_composition
 
@@ -11,6 +12,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # page_turn: ^1.0.1
+  # page_turn:
+  #   path: page_turn/
+  page_turn:
+    git: https://github.com/stevendz/page_turn
+    ref: nullsafety
 
 dev_dependencies:
   flutter_test:

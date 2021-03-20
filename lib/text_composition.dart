@@ -1,4 +1,3 @@
-// @dart = 2.12
 library text_composition;
 
 import 'package:flutter/material.dart';
@@ -115,11 +114,9 @@ class TextComposition {
     final padding = this.padding ?? EdgeInsets.zero;
     final margin = this.margin ?? EdgeInsets.zero;
     final innerSize = Size(
-        this.boxSize.width - padding.horizontal - margin.horizontal,
-        this.boxSize.height -
-            padding.vertical -
-            margin.vertical -
-            footerHeight);
+      this.boxSize.width - padding.horizontal - margin.horizontal,
+      this.boxSize.height - padding.vertical - margin.vertical - footerHeight,
+    );
     columnWidth =
         (innerSize.width - (columnCount - 1) * columnGap) / columnCount;
 
