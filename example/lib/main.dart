@@ -113,7 +113,7 @@ class _SettingState extends State<Setting> {
             height: 10,
           ),
           OutlinedButton(
-            child: Text("预览 翻页"),
+            child: Text("预览 自动翻页"),
             onPressed: () async {
               if (textComposition == null) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -123,9 +123,29 @@ class _SettingState extends State<Setting> {
                 await SystemChrome.setEnabledSystemUIOverlays([]);
                 Navigator.of(context)
                     .push(MaterialPageRoute(
-                        builder: (BuildContext context) => TCAutoPage(textComposition!)))
+                        builder: (BuildContext context) => AutoPage(textComposition!)))
                     .then((value) =>
                         SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
+              }
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          OutlinedButton(
+            child: Text("预览 仿真翻页"),
+            onPressed: () async {
+              if (textComposition == null) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('先排版才能预览'),
+                ));
+              } else {
+                await SystemChrome.setEnabledSystemUIOverlays([]);
+                Navigator.of(context)
+                    .push(MaterialPageRoute(
+                    builder: (BuildContext context) => PageTurn(textComposition: textComposition!,)))
+                    .then((value) =>
+                    SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
               }
             },
           ),

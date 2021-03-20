@@ -4,6 +4,7 @@ library text_composition;
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 export 'auto_page.dart';
+export 'page_turn.dart';
 
 /// * 暂不支持图片
 /// * 文本排版
