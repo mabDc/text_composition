@@ -26,9 +26,80 @@ class _SettingState extends State<Setting> {
       shouldJustifyHeight = true,
       start = DateTime.now(),
       end = DateTime.now(),
-      showMenu = true;
+      showMenu = true,
+      showTip = true,
+      showAnimation = true;
   Widget? content;
   TextComposition? textComposition;
+
+  void start11() {
+    physicalSize = window.physicalSize;
+    ratio = window.devicePixelRatio;
+    final _size = physicalSize / ratio;
+    final width = physicalSize.width / ratio;
+    start = DateTime.now();
+    textComposition = TextComposition(
+      paragraphs: first_chapter,
+      style: TextStyle(
+        color: Colors.black87,
+        fontSize: double.tryParse(size.text),
+        height: double.tryParse(height.text),
+      ),
+      title: "烙印纹章 第一卷 一卷全",
+      titleStyle: TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.bold,
+        fontSize: double.tryParse(size.text),
+        height: 2,
+      ),
+      columnGap: 40,
+      columnCount: width > 1200
+          ? 3
+          : width > 600
+              ? 2
+              : 1,
+      paragraph: double.tryParse(paragraph.text) ?? 10.0,
+      padding: EdgeInsets.all(10),
+      shouldJustifyHeight: shouldJustifyHeight,
+      debug: true,
+      showAnimation: showAnimation,
+      // buildFooter: ({TextPage? page, int? pageIndex}) {
+      //   return Text(
+      //     "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
+      //     style: TextStyle(fontSize: 12),
+      //   );
+      // },
+      // footerHeight: 24,
+      // linkPattern: "<img",
+      // linkText: (s) =>
+      //     RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
+      // linkStyle: TextStyle(
+      //   color: Colors.cyan,
+      //   fontStyle: FontStyle.italic,
+      //   fontSize: double.tryParse(size.text),
+      //   height: double.tryParse(height.text),
+      // ),
+      // onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
+      //     builder: (BuildContext context) => Scaffold(
+      //           appBar: AppBar(),
+      //           body: Image.network(
+      //               RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
+      //         ))),
+    );
+    end = DateTime.now();
+    setState(() {
+      content = PageTurn(
+        textComposition: textComposition!,
+      );
+    });
+  }
+
+  @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIOverlays([]);
+    start11();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,166 +108,148 @@ class _SettingState extends State<Setting> {
     final _size = physicalSize / ratio;
     return Scaffold(
       body: Stack(
-        alignment: Alignment.center,
         children: [
           if (content != null) content!,
-          if (showMenu)
-            InkWell(
+          if (showTip)
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              child: Flex(
+                direction: Axis.horizontal,
+                children: <Widget>[
+                  Flexible(
+                    flex: 8,
+                    child: Container(
+                        color: Colors.green.withAlpha(100),
+                        child: Center(
+                          child: Text("手\n势\n上\n一\n页\n触\n发",
+                              style: TextStyle(fontSize: 28)),
+                        )),
+                  ),
+                  Flexible(
+                    flex: 42,
+                    child: Container(
+                        color: Colors.blue.withAlpha(100),
+                        child: Center(
+                          child: Text("点\n击\n上\n一\n页",
+                              style: TextStyle(fontSize: 28)),
+                        )),
+                  ),
+                  Flexible(
+                    flex: 42,
+                    child: Container(
+                        color: Colors.pink.withAlpha(100),
+                        child: Center(
+                          child: Text("点\n击\n下\n一\n页",
+                              style: TextStyle(fontSize: 28)),
+                        )),
+                  ),
+                  Flexible(
+                    flex: 8,
+                    child: Container(
+                        color: Colors.red.withAlpha(100),
+                        child: Center(
+                          child: Text("手\n势\n下\n一\n页\n触\n发",
+                              style: TextStyle(fontSize: 28)),
+                        )),
+                  ),
+                ],
+              ),
+            ),
+          Center(
+            child: InkWell(
               child: Container(
-                child: Center(),
-                color: Colors.transparent,
-                width: double.infinity,
-                height: double.infinity,
+                color: showTip
+                    ? Colors.indigo.withOpacity(0.2)
+                    : Colors.transparent,
+                width: _size.width / 3,
+                height: _size.height / 3,
+                child: Center(
+                  child: showTip
+                      ? Text(
+                          "切\n换\n菜\n单\n显\n示",
+                          style: TextStyle(fontSize: 30),
+                        )
+                      : null,
+                ),
               ),
               onTap: () {
                 setState(() {
-                  showMenu = false;
+                  showMenu = !showMenu;
                 });
               },
             ),
-          if (!showMenu)
-            InkWell(
-              child: Container(
-                child: Center(child: Text("显示菜单", style: TextStyle(fontSize: 24),),),
-                color: Colors.limeAccent.withOpacity(0.3),
-                width: _size.width / 2,
-                height: _size.height / 2,
-              ),
-              onTap: () {
-                setState(() {
-                  showMenu = true;
-                });
-              },
-            ),
+          ),
           if (showMenu)
             Card(
-              child: Container(
-                height: _size.height * 2 / 3,
-                padding: EdgeInsets.all(10),
-                child: ListView(
-                  children: [
-                    Text(
-                        "physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
-                    TextField(
-                      decoration: InputDecoration(labelText: "字号 size"),
-                      controller: size,
-                      keyboardType: TextInputType.number,
-                    ),
-                    TextField(
-                      decoration: InputDecoration(labelText: "行高 height"),
-                      controller: height,
-                      keyboardType: TextInputType.number,
-                    ),
-                    TextField(
-                      decoration: InputDecoration(labelText: "段高 paragraph"),
-                      controller: paragraph,
-                      keyboardType: TextInputType.number,
-                    ),
-                    SwitchListTile(
-                      title: Text("是否底栏对齐"),
-                      subtitle: Text("shouldJustifyHeight"),
-                      value: shouldJustifyHeight,
-                      onChanged: (bool value) => setState(() {
-                        shouldJustifyHeight = !shouldJustifyHeight;
-                      }),
-                    ),
-                    Text("排版开始 $start"),
-                    Text("排版结束 $end"),
-                    OutlinedButton(
-                      child: Text("开始或重新排版"),
-                      onPressed: () {
-                        final width = physicalSize.width / ratio;
-                        start = DateTime.now();
-                        textComposition = TextComposition(
-                          paragraphs: first_chapter,
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: double.tryParse(size.text),
-                            height: double.tryParse(height.text),
-                          ),
-                          title: "烙印纹章 第一卷 一卷全",
-                          titleStyle: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: double.tryParse(size.text),
-                            height: 2,
-                          ),
-                          columnGap: 40,
-                          columnCount: width > 1200
-                              ? 3
-                              : width > 600
-                                  ? 2
-                                  : 1,
-                          paragraph: double.tryParse(paragraph.text) ?? 10.0,
-                          padding: EdgeInsets.all(10),
-                          shouldJustifyHeight: shouldJustifyHeight,
-                          debug: true,
-                          // buildFooter: ({TextPage? page, int? pageIndex}) {
-                          //   return Text(
-                          //     "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
-                          //     style: TextStyle(fontSize: 12),
-                          //   );
-                          // },
-                          // footerHeight: 24,
-                          // linkPattern: "<img",
-                          // linkText: (s) =>
-                          //     RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
-                          // linkStyle: TextStyle(
-                          //   color: Colors.cyan,
-                          //   fontStyle: FontStyle.italic,
-                          //   fontSize: double.tryParse(size.text),
-                          //   height: double.tryParse(height.text),
-                          // ),
-                          // onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
-                          //     builder: (BuildContext context) => Scaffold(
-                          //           appBar: AppBar(),
-                          //           body: Image.network(
-                          //               RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
-                          //         ))),
-                        );
-                        end = DateTime.now();
-                        setState(() {});
-                      },
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      child: Text("手势翻页 修改版"),
-                      onPressed: () async {
-                        if (textComposition == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('先排版才能预览'),
-                          ));
-                        } else {
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                      "physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
+                  TextField(
+                    decoration: InputDecoration(labelText: "字号 size"),
+                    controller: size,
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    decoration: InputDecoration(labelText: "行高 height"),
+                    controller: height,
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    decoration: InputDecoration(labelText: "段高 paragraph"),
+                    controller: paragraph,
+                    keyboardType: TextInputType.number,
+                  ),
+                  SwitchListTile(
+                    title: Text("是否底栏对齐"),
+                    subtitle: Text("shouldJustifyHeight"),
+                    value: shouldJustifyHeight,
+                    onChanged: (bool value) => setState(() {
+                      shouldJustifyHeight = !shouldJustifyHeight;
+                    }),
+                  ),
+                  Text("排版开始 $start"),
+                  Text("排版结束 $end"),
+                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      TextButton(
+                        child: Text("开始"),
+                        onPressed: () {
+                          start11();
                           setState(() {
-                            content = PageTurn(
-                              textComposition: textComposition!,
-                            );
+                            showMenu = false;
                           });
-                        }
-                      },
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      child: Text("水平排列"),
-                      onPressed: () async {
-                        if (textComposition == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('先排版才能预览'),
-                          ));
-                        } else {
-                          setState(() {
-                            content =
-                                PageListView(textComposition: textComposition!);
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                        },
+                      ),
+                      TextButton(
+                        child: Text("无动画"),
+                        onPressed: () {
+                          showAnimation = false;
+                          textComposition?.showAnimation = false;
+                        },
+                      ),
+                      TextButton(
+                        child: Text("仿真"),
+                        onPressed: () {
+                          showAnimation = true;
+                          textComposition?.showAnimation = true;
+                        },
+                      ),
+                      TextButton(
+                        child: Text("显示提示"),
+                        onPressed: () {
+                          if (content != null)
+                            setState(() {
+                              showTip = !showTip;
+                            });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
         ],
@@ -204,11 +257,7 @@ class _SettingState extends State<Setting> {
     );
   }
 
-  @override
-  void initState() {
-    SystemChrome.setEnabledSystemUIOverlays([]);
-    super.initState();
-  }
+
 }
 
 class PageListView extends StatelessWidget {

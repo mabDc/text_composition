@@ -32,8 +32,7 @@ class PageTurn extends StatefulWidget {
   PageTurnState createState() => PageTurnState();
 }
 
-class PageTurnState extends State<PageTurn>
-    with TickerProviderStateMixin {
+class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
   int pageNumber = 0;
   List<Widget> pages = [];
 
@@ -140,7 +139,10 @@ class PageTurnState extends State<PageTurn>
 
   Future<void> nextPage() async {
     if (_isLastPage) return;
-    _controllers[pageNumber].reverse();
+    if (widget.textComposition.showAnimation)
+      _controllers[pageNumber].reverse();
+    else
+      _controllers[pageNumber].value = 0;
     if (mounted)
       setState(() {
         pageNumber++;
@@ -149,7 +151,10 @@ class PageTurnState extends State<PageTurn>
 
   Future<void> previousPage() async {
     if (_isFirstPage) return;
-    _controllers[pageNumber - 1].forward();
+    if (widget.textComposition.showAnimation)
+      _controllers[pageNumber - 1].forward();
+    else
+      _controllers[pageNumber - 1].value = 1;
     if (mounted)
       setState(() {
         pageNumber--;
@@ -232,62 +237,17 @@ class PageTurnState extends State<PageTurn>
                     direction: Axis.horizontal,
                     children: <Widget>[
                       Flexible(
-                        flex: widget.cuton,
-                        child: Container(
-                          color: pageNumber < 3
-                              ? Colors.green.withAlpha(100)
-                              : null,
-                          child: pageNumber < 3
-                              ? Center(
-                                  child: Text("手势上一页",
-                                      style: TextStyle(fontSize: 25)))
-                              : null,
-                        ),
-                      ),
-                      Flexible(
                         flex: 50 - widget.cuton,
-                        child: Container(
-                          color: pageNumber < 3
-                              ? Colors.blue.withAlpha(100)
-                              : null,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _isFirstPage ? null : previousPage,
-                            child: pageNumber < 3
-                                ? Center(
-                                    child: Text("点击上一页",
-                                        style: TextStyle(fontSize: 25)))
-                                : Center(),
-                          ),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: previousPage,
                         ),
                       ),
                       Flexible(
                         flex: widget.cutoff - 50,
-                        child: Container(
-                          color:
-                              pageNumber < 3 ? Colors.red.withAlpha(100) : null,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _isLastPage ? null : nextPage,
-                            child: pageNumber < 3
-                                ? Center(
-                                    child: Text("点击下一页",
-                                        style: TextStyle(fontSize: 25)))
-                                : null,
-                          ),
-                        ),
-                      ),
-                      Flexible(
-                        flex: 100 - widget.cutoff,
-                        child: Container(
-                          color: pageNumber < 3
-                              ? Colors.pink.withAlpha(100)
-                              : null,
-                          child: pageNumber < 3
-                              ? Center(
-                                  child: Text("手势下一页",
-                                      style: TextStyle(fontSize: 25)))
-                              : null,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: nextPage,
                         ),
                       ),
                     ],

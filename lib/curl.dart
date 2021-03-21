@@ -32,7 +32,7 @@ class PageTurnEffect extends CustomPainter {
     required this.image,
     this.backgroundColor,
     this.radius = 0.18,
-  });
+  }) : super(repaint: amount);
 
   final Animation<double> amount;
   final ui.Image image;
@@ -135,10 +135,13 @@ class PageTurnEffectWithTextPage extends CustomPainter {
       );
     }
 
-    if (image == null) {
-      final pic = ui.PictureRecorder();
-      final c = Canvas(pic);
-
+    if (image == null || pos > 0.99) {
+      ui.PictureRecorder? pic;
+      ui.Canvas? c;
+      if (image == null) {
+        pic = ui.PictureRecorder();
+        c = Canvas(pic);
+      }
       final lineCount = page.lines.length;
       final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
       for (var i = 0; i < lineCount; i++) {
@@ -158,37 +161,12 @@ class PageTurnEffectWithTextPage extends CustomPainter {
         final offset = Offset(line.dx, line.dy);
         tp.layout();
         tp.paint(canvas, offset);
-        tp.paint(c, offset);
+        if (c != null) tp.paint(c, offset);
       }
       pic
-          .endRecording()
-          .toImage(size.width.floor(), size.height.floor())
+          ?.endRecording()
+          .toImage(size.width.round(), size.height.round())
           .then((value) => image = value);
-      return;
-    } else if (pos == 1) {
-      final lineCount = page.lines.length;
-      final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
-      for (var i = 0; i < lineCount; i++) {
-        final line = page.lines[i];
-        if (line.letterSpacing != null) {
-          print("**************letterSpacing");
-          print(DateTime.now());
-          tp.text = TextSpan(
-            text: line.text,
-            style: line.isTitle
-                ? titleStyle?.copyWith(letterSpacing: line.letterSpacing)
-                : style.copyWith(letterSpacing: line.letterSpacing),
-          );
-          print(DateTime.now());
-        } else {
-          tp.text = TextSpan(
-              text: line.text, style: line.isTitle ? titleStyle : style);
-        }
-        final offset = Offset(line.dx, line.dy);
-        tp.layout();
-        tp.paint(canvas, offset);
-      }
-
       return;
     }
 
@@ -213,7 +191,6 @@ class PageTurnEffectWithTextPage extends CustomPainter {
   @override
   bool shouldRepaint(PageTurnEffectWithTextPage oldDelegate) {
     return oldDelegate.image != image ||
-        oldDelegate.amount.value != amount.value ||
-        oldDelegate.pageIndex != pageIndex;
+        oldDelegate.amount.value != amount.value;
   }
 }

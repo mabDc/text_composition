@@ -2,7 +2,6 @@ library text_composition;
 
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-export 'auto_page.dart';
 export 'page_turn.dart';
 
 /// * 暂不支持图片
@@ -58,6 +57,9 @@ class TextComposition {
   /// 背景 背景色或者背景图片
   final ui.Image Function(int pageIndex)? getBackground;
 
+  /// 是否显示动画
+  bool showAnimation;
+
   // final Pattern? linkPattern;
   // final TextStyle? linkStyle;
   // final String Function(String s)? linkText;
@@ -100,6 +102,7 @@ class TextComposition {
     this.getBackground,
     this.debug = false,
     List<TextPage>? pages,
+    this.showAnimation = true,
     // this.linkPattern,
     // this.linkStyle,
     // this.linkText,
