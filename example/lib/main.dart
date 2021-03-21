@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:text_composition/text_composition.dart';
-import 'package:page_turn/page_turn.dart'as ori;
 
 import 'first_chapter.dart';
 
@@ -26,180 +25,196 @@ class _SettingState extends State<Setting> {
       paragraph = TextEditingController(text: '10'),
       shouldJustifyHeight = true,
       start = DateTime.now(),
-      end = DateTime.now();
+      end = DateTime.now(),
+      showMenu = true;
+  Widget? content;
   TextComposition? textComposition;
+
   @override
   Widget build(BuildContext context) {
+    physicalSize = window.physicalSize;
+    ratio = window.devicePixelRatio;
+    final _size = physicalSize / ratio;
     return Scaffold(
-      body: ListView(
-        padding: EdgeInsets.all(30),
+      body: Stack(
+        alignment: Alignment.center,
         children: [
-          Text("physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
-          TextField(
-            decoration: InputDecoration(labelText: "字号 size"),
-            controller: size,
-            keyboardType: TextInputType.number,
-          ),
-          TextField(
-            decoration: InputDecoration(labelText: "行高 height"),
-            controller: height,
-            keyboardType: TextInputType.number,
-          ),
-          TextField(
-            decoration: InputDecoration(labelText: "段高 paragraph"),
-            controller: paragraph,
-            keyboardType: TextInputType.number,
-          ),
-          SwitchListTile(
-            title: Text("是否底栏对齐"),
-            subtitle: Text("shouldJustifyHeight"),
-            value: shouldJustifyHeight,
-            onChanged: (bool value) => setState(() {
-              shouldJustifyHeight = !shouldJustifyHeight;
-            }),
-          ),
-          Text("排版开始 $start"),
-          Text("排版结束 $end"),
-          OutlinedButton(
-            child: Text("开始或重新排版"),
-            onPressed: () {
-              physicalSize = window.physicalSize;
-              ratio = window.devicePixelRatio;
-              start = DateTime.now();
-              textComposition = TextComposition(
-                paragraphs: first_chapter,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: double.tryParse(size.text),
-                  height: double.tryParse(height.text),
-                ),
-                title: "烙印纹章 第一卷 一卷全",
-                titleStyle: TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: double.tryParse(size.text),
-                  height: 2,
-                ),
-                paragraph: double.tryParse(paragraph.text) ?? 10.0,
+          if (content != null) content!,
+          if (showMenu)
+            InkWell(
+              child: Container(
+                child: Center(),
+                color: Colors.transparent,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              onTap: () {
+                setState(() {
+                  showMenu = false;
+                });
+              },
+            ),
+          if (!showMenu)
+            InkWell(
+              child: Container(
+                child: Center(child: Text("显示菜单", style: TextStyle(fontSize: 24),),),
+                color: Colors.limeAccent.withOpacity(0.3),
+                width: _size.width / 2,
+                height: _size.height / 2,
+              ),
+              onTap: () {
+                setState(() {
+                  showMenu = true;
+                });
+              },
+            ),
+          if (showMenu)
+            Card(
+              child: Container(
+                height: _size.height * 2 / 3,
                 padding: EdgeInsets.all(10),
-                buildFooter: ({TextPage? page, int? pageIndex}) {
-                  return Text(
-                    "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
-                    style: TextStyle(fontSize: 12),
-                  );
-                },
-                footerHeight: 24,
-                shouldJustifyHeight: shouldJustifyHeight,
-                linkPattern: "<img",
-                linkText: (s) =>
-                    RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
-                linkStyle: TextStyle(
-                  color: Colors.cyan,
-                  fontStyle: FontStyle.italic,
-                  fontSize: double.tryParse(size.text),
-                  height: double.tryParse(height.text),
+                child: ListView(
+                  children: [
+                    Text(
+                        "physicalSize / ratio: $physicalSize / $ratio = ${physicalSize / ratio}"),
+                    TextField(
+                      decoration: InputDecoration(labelText: "字号 size"),
+                      controller: size,
+                      keyboardType: TextInputType.number,
+                    ),
+                    TextField(
+                      decoration: InputDecoration(labelText: "行高 height"),
+                      controller: height,
+                      keyboardType: TextInputType.number,
+                    ),
+                    TextField(
+                      decoration: InputDecoration(labelText: "段高 paragraph"),
+                      controller: paragraph,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SwitchListTile(
+                      title: Text("是否底栏对齐"),
+                      subtitle: Text("shouldJustifyHeight"),
+                      value: shouldJustifyHeight,
+                      onChanged: (bool value) => setState(() {
+                        shouldJustifyHeight = !shouldJustifyHeight;
+                      }),
+                    ),
+                    Text("排版开始 $start"),
+                    Text("排版结束 $end"),
+                    OutlinedButton(
+                      child: Text("开始或重新排版"),
+                      onPressed: () {
+                        final width = physicalSize.width / ratio;
+                        start = DateTime.now();
+                        textComposition = TextComposition(
+                          paragraphs: first_chapter,
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: double.tryParse(size.text),
+                            height: double.tryParse(height.text),
+                          ),
+                          title: "烙印纹章 第一卷 一卷全",
+                          titleStyle: TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            fontSize: double.tryParse(size.text),
+                            height: 2,
+                          ),
+                          columnGap: 40,
+                          columnCount: width > 1200
+                              ? 3
+                              : width > 600
+                                  ? 2
+                                  : 1,
+                          paragraph: double.tryParse(paragraph.text) ?? 10.0,
+                          padding: EdgeInsets.all(10),
+                          shouldJustifyHeight: shouldJustifyHeight,
+                          debug: true,
+                          // buildFooter: ({TextPage? page, int? pageIndex}) {
+                          //   return Text(
+                          //     "烙印纹章 第一卷 一卷全 ${pageIndex == null ? '' : pageIndex + 1}/${textComposition!.pageCount}",
+                          //     style: TextStyle(fontSize: 12),
+                          //   );
+                          // },
+                          // footerHeight: 24,
+                          // linkPattern: "<img",
+                          // linkText: (s) =>
+                          //     RegExp('(?<=src=".*)[^/\'"]+(?=[\'"])').stringMatch(s) ?? "链接",
+                          // linkStyle: TextStyle(
+                          //   color: Colors.cyan,
+                          //   fontStyle: FontStyle.italic,
+                          //   fontSize: double.tryParse(size.text),
+                          //   height: double.tryParse(height.text),
+                          // ),
+                          // onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
+                          //     builder: (BuildContext context) => Scaffold(
+                          //           appBar: AppBar(),
+                          //           body: Image.network(
+                          //               RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
+                          //         ))),
+                        );
+                        end = DateTime.now();
+                        setState(() {});
+                      },
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      child: Text("手势翻页 修改版"),
+                      onPressed: () async {
+                        if (textComposition == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('先排版才能预览'),
+                          ));
+                        } else {
+                          setState(() {
+                            content = PageTurn(
+                              textComposition: textComposition!,
+                            );
+                          });
+                        }
+                      },
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      child: Text("水平排列"),
+                      onPressed: () async {
+                        if (textComposition == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('先排版才能预览'),
+                          ));
+                        } else {
+                          setState(() {
+                            content =
+                                PageListView(textComposition: textComposition!);
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                // onLinkTap: (s) => Navigator.of(context).push(MaterialPageRoute(
-                //     builder: (BuildContext context) => Scaffold(
-                //           appBar: AppBar(),
-                //           body: Image.network(
-                //               RegExp('(?<=src=")[^\'"]+').stringMatch(s) ?? ""),
-                //         ))),
-              );
-              end = DateTime.now();
-              setState(() {});
-            },
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          OutlinedButton(
-            child: Text("预览 自动翻页"),
-            onPressed: () async {
-              if (textComposition == null) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('先排版才能预览'),
-                ));
-              } else {
-                await SystemChrome.setEnabledSystemUIOverlays([]);
-                Navigator.of(context)
-                    .push(MaterialPageRoute(
-                        builder: (BuildContext context) => AutoPage(textComposition!)))
-                    .then((value) =>
-                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
-              }
-            },
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          OutlinedButton(
-            child: Text("预览 仿真翻页 原始版"),
-            onPressed: () async {
-              if (textComposition == null) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('先排版才能预览'),
-                ));
-              } else {
-                await SystemChrome.setEnabledSystemUIOverlays([]);
-                Navigator.of(context)
-                    .push(MaterialPageRoute(
-                    builder: (BuildContext context) => HomeScreen(textComposition: textComposition!,)))
-                    .then((value) =>
-                    SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
-              }
-            },
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          OutlinedButton(
-            child: Text("预览 仿真翻页 修改版"),
-            onPressed: () async {
-              if (textComposition == null) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('先排版才能预览'),
-                ));
-              } else {
-                await SystemChrome.setEnabledSystemUIOverlays([]);
-                Navigator.of(context)
-                    .push(MaterialPageRoute(
-                    builder: (BuildContext context) => PageTurn(textComposition: textComposition!,)))
-                    .then((value) =>
-                    SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
-              }
-            },
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          OutlinedButton(
-            child: Text("预览 水平排列"),
-            onPressed: () async {
-              if (textComposition == null) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('先排版才能预览'),
-                ));
-              } else {
-                await SystemChrome.setEnabledSystemUIOverlays([]);
-                Navigator.of(context)
-                    .push(MaterialPageRoute(
-                        builder: (BuildContext context) =>
-                            PageListView(textComposition: textComposition!)))
-                    .then((value) =>
-                        SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values));
-              }
-            },
-          ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIOverlays([]);
+    super.initState();
   }
 }
 
 class PageListView extends StatelessWidget {
   final TextComposition textComposition;
-  const PageListView({required this.textComposition, Key? key}) : super(key: key);
+  const PageListView({required this.textComposition, Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -225,38 +240,9 @@ class PageListView extends StatelessWidget {
         itemCount: textComposition.pageCount,
         separatorBuilder: (BuildContext context, int index) => col,
         itemBuilder: (BuildContext context, int index) {
-          return textComposition.getPageWidget(pageIndex: index, debugPrint: false);
+          return textComposition.getPageWidget(index);
         },
       ),
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  final TextComposition textComposition;
-  const HomeScreen({
-    required this.textComposition,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final _controller = GlobalKey<PageTurnState>();
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: ori.PageTurn(
-        key: _controller,
-        backgroundColor: Colors.white,
-        showDragCutoff: false,
-        lastPage: Container(child: Center(child: Text('Last Page!'))),
-        children: <Widget>[
-          for (var i = 0; i < widget.textComposition.pageCount; i++) widget.textComposition.getPageWidget(pageIndex: i),
-        ],
-      )
     );
   }
 }

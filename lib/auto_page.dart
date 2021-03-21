@@ -48,7 +48,7 @@ class AutoPage extends StatelessWidget {
       page = 0;
     }
     Navigator.pushReplacement(
-        context, createRoute(AutoPage(textComposition, page, type), type, next));
+        context, createRoute(AutoPage(textComposition, page, this.type), type, next));
   }
 
   Route createRoute(Widget child, int type, bool next) {
@@ -87,7 +87,7 @@ class AutoPage extends StatelessWidget {
                 end: Offset(0.0, 0.0),
               ).animate(CurvedAnimation(
                 parent: animation,
-                curve: Curves.fastOutSlowIn,
+                curve: Curves.easeInToLinear,
               )),
               child: child,
             );
@@ -199,7 +199,7 @@ class AutoPage extends StatelessWidget {
               }
             }
           },
-          child: textComposition.getPageWidget(pageIndex: currentPage),
+          child: textComposition.getPageWidget(currentPage),
         ),
       ),
     );
