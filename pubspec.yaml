@@ -12,12 +12,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # page_turn: ^1.0.1
-  # page_turn:
-  #   path: page_turn/
-  page_turn:
-    git: https://github.com/stevendz/page_turn
-    ref: nullsafety
 
 dev_dependencies:
   flutter_test:

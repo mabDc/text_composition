@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:page_turn/src/builders/index.dart';
-
+import 'package:flutter/services.dart';
+import 'package:text_composition/curl.dart';
 import 'text_composition.dart';
 
 class PageTurn extends StatefulWidget {
@@ -32,7 +32,8 @@ class PageTurn extends StatefulWidget {
   PageTurnState createState() => PageTurnState();
 }
 
-class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
+class PageTurnState extends State<PageTurn>
+    with TickerProviderStateMixin {
   int pageNumber = 0;
   List<Widget> pages = [];
 
@@ -68,6 +69,7 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
   void _setUp() {
     _controllers.clear();
     pages.clear();
+
     for (var i = 0; i < widget.textComposition.pageCount; i++) {
       final _controller = AnimationController(
         value: 1,
@@ -75,11 +77,14 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
         vsync: this,
       );
       _controllers.add(_controller);
-      final _child = Container(
-        child: PageTurnWidget(
+      var _child = CustomPaint(
+        painter: PageTurnEffectWithTextPage(
+          amount: _controller,
           backgroundColor: widget.backgroundColor,
-          amount: _controllers[i],
-          child: widget.textComposition.getPageWidget(pageIndex: i),
+          pageIndex: i,
+          page: widget.textComposition.pages[i],
+          style: widget.textComposition.style,
+          titleStyle: widget.textComposition.titleStyle,
         ),
       );
       pages.add(_child);
@@ -101,7 +106,7 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
         _isForward = true;
       }
     }
-    if (_isForward! || pageNumber == 0) {
+    if (_isForward!) {
       _controllers[pageNumber].value += _ratio;
     } else {
       _controllers[pageNumber - 1].value += _ratio;
@@ -134,6 +139,7 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
   }
 
   Future<void> nextPage() async {
+    if (_isLastPage) return;
     _controllers[pageNumber].reverse();
     if (mounted)
       setState(() {
@@ -142,6 +148,7 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
   }
 
   Future<void> previousPage() async {
+    if (_isFirstPage) return;
     _controllers[pageNumber - 1].forward();
     if (mounted)
       setState(() {
@@ -150,18 +157,21 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
   }
 
   Future<void> goToPage(int index) async {
-    if (mounted)
+    if (mounted) {
+      if (index > pageNumber) {
+        _controllers[index - 1].reverse();
+      } else {
+        _controllers[index].forward();
+      }
       setState(() {
         pageNumber = index;
       });
-    for (var i = 0; i < _controllers.length; i++) {
-      if (i == index) {
-        _controllers[i].forward();
-      } else if (i < index) {
-        _controllers[i].reverse();
-      } else {
-        if (_controllers[i].status == AnimationStatus.reverse)
+      for (var i = 0; i < _controllers.length; i++) {
+        if (i < index - 1) {
+          _controllers[i].value = 0;
+        } else if (i > index) {
           _controllers[i].value = 1;
+        }
       }
     }
   }
@@ -171,86 +181,120 @@ class PageTurnState extends State<PageTurn> with TickerProviderStateMixin {
     int i = 0;
     return Material(
       child: LayoutBuilder(
-        builder: (context, dimens) => GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragCancel: () => _isForward = null,
-          onHorizontalDragUpdate: (details) => _turnPage(details, dimens),
-          onHorizontalDragEnd: (details) => _onDragFinish(),
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              if (widget.lastPage != null) widget.lastPage!,
-              ...pages.map((p) {
-                i++;
-                final pn = pages.length - pageNumber;
-                final ret =
-                    Offstage(offstage: !(i >= pn - 2 && i <= pn + 1), child: p);
-                return ret;
-              }).toList(),
-              Positioned.fill(
-                child: Flex(
-                  direction: Axis.horizontal,
-                  children: <Widget>[
-                    Flexible(
-                      flex: widget.cuton,
-                      child: Container(
-                        color:
-                            pageNumber < 3 ? Colors.green.withAlpha(100) : null,
-                        child: pageNumber < 3
-                            ? Center(
-                                child: Text("手势上一页",
-                                    style: TextStyle(fontSize: 25)))
-                            : null,
-                      ),
-                    ),
-                    Flexible(
-                      flex: 50 - widget.cuton,
-                      child: Container(
-                        color:
-                            pageNumber < 3 ? Colors.blue.withAlpha(100) : null,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _isFirstPage ? null : previousPage,
+        builder: (context, dimens) => RawKeyboardListener(
+          focusNode: new FocusNode(),
+          autofocus: true,
+          onKey: (event) {
+            if (event.runtimeType.toString() == 'RawKeyUpEvent') return;
+            if (event.data is RawKeyEventDataMacOs ||
+                event.data is RawKeyEventDataLinux ||
+                event.data is RawKeyEventDataWindows) {
+              final logicalKey = event.data.logicalKey;
+              print(logicalKey);
+              if (logicalKey == LogicalKeyboardKey.arrowUp) {
+                previousPage();
+              } else if (logicalKey == LogicalKeyboardKey.arrowLeft) {
+                previousPage();
+              } else if (logicalKey == LogicalKeyboardKey.arrowDown) {
+                nextPage();
+              } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
+                nextPage();
+              } else if (logicalKey == LogicalKeyboardKey.home) {
+                goToPage(0);
+              } else if (logicalKey == LogicalKeyboardKey.end) {
+                goToPage(pages.length - 1);
+              } else if (logicalKey == LogicalKeyboardKey.enter ||
+                  logicalKey == LogicalKeyboardKey.numpadEnter) {
+                //
+              } else if (logicalKey == LogicalKeyboardKey.escape) {
+                Navigator.of(context).pop();
+              }
+            }
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragCancel: () => _isForward = null,
+            onHorizontalDragUpdate: (details) => _turnPage(details, dimens),
+            onHorizontalDragEnd: (details) => _onDragFinish(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                if (widget.lastPage != null) widget.lastPage!,
+                ...pages.map((p) {
+                  i++;
+                  final pn = pages.length - pageNumber;
+                  final ret = Offstage(
+                      offstage: !(i >= pn - 2 && i <= pn + 1), child: p);
+                  return ret;
+                }).toList(),
+                Positioned.fill(
+                  child: Flex(
+                    direction: Axis.horizontal,
+                    children: <Widget>[
+                      Flexible(
+                        flex: widget.cuton,
+                        child: Container(
+                          color: pageNumber < 3
+                              ? Colors.green.withAlpha(100)
+                              : null,
                           child: pageNumber < 3
                               ? Center(
-                                  child: Text("点击上一页",
+                                  child: Text("手势上一页",
                                       style: TextStyle(fontSize: 25)))
                               : null,
                         ),
                       ),
-                    ),
-                    Flexible(
-                      flex: widget.cutoff - 50,
-                      child: Container(
-                        color:
-                            pageNumber < 3 ? Colors.red.withAlpha(100) : null,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _isLastPage ? null : nextPage,
+                      Flexible(
+                        flex: 50 - widget.cuton,
+                        child: Container(
+                          color: pageNumber < 3
+                              ? Colors.blue.withAlpha(100)
+                              : null,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _isFirstPage ? null : previousPage,
+                            child: pageNumber < 3
+                                ? Center(
+                                    child: Text("点击上一页",
+                                        style: TextStyle(fontSize: 25)))
+                                : Center(),
+                          ),
+                        ),
+                      ),
+                      Flexible(
+                        flex: widget.cutoff - 50,
+                        child: Container(
+                          color:
+                              pageNumber < 3 ? Colors.red.withAlpha(100) : null,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _isLastPage ? null : nextPage,
+                            child: pageNumber < 3
+                                ? Center(
+                                    child: Text("点击下一页",
+                                        style: TextStyle(fontSize: 25)))
+                                : null,
+                          ),
+                        ),
+                      ),
+                      Flexible(
+                        flex: 100 - widget.cutoff,
+                        child: Container(
+                          color: pageNumber < 3
+                              ? Colors.pink.withAlpha(100)
+                              : null,
                           child: pageNumber < 3
                               ? Center(
-                                  child: Text("点击下一页",
+                                  child: Text("手势下一页",
                                       style: TextStyle(fontSize: 25)))
                               : null,
                         ),
                       ),
-                    ),
-                    Flexible(
-                      flex: 100 - widget.cutoff,
-                      child: Container(
-                        color:
-                            pageNumber < 3 ? Colors.pink.withAlpha(100) : null,
-                        child: pageNumber < 3
-                            ? Center(
-                                child: Text("手势下一页",
-                                    style: TextStyle(fontSize: 25)))
-                            : null,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
