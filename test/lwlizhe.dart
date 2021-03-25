@@ -1,3 +1,4 @@
+/// 改写自 https://github.com/lwlizhe/flutter_novel/blob/master/lib/app/novel/widget/reader/content/helper/animation/animation_page_simulation_turn.dart
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:vector_math/vector_math_64.dart' as v;
