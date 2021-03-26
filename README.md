@@ -4,7 +4,7 @@ flutter 中文排版 分页 上下对齐 两端对齐 多栏布局
 
 弃用richText，使用Canvas，精确定位绘图位置，消除字体对排版影响
 
-# 效果
+# 演示视频
 
 https://user-images.githubusercontent.com/19526331/112481313-d8258f00-8db1-11eb-8faf-d96a7188116a.mp4
 
