@@ -6,7 +6,7 @@ flutter 中文排版 分页 上下对齐 两端对齐 多栏布局
 
 # 视频与截图
 
-### demo
+### demo https://github.com/mabDc/text_composition/releases/tag/0.0.5
 
 ### 视频 https://user-images.githubusercontent.com/19526331/112481313-d8258f00-8db1-11eb-8faf-d96a7188116a.mp4
 
