@@ -1,308 +1,55 @@
 library text_composition;
 
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:ui' as ui;
-export 'page_turn.dart';
 
-/// * 暂不支持图片
-/// * 文本排版
-/// * 两端对齐
-/// * 底栏对齐
-class TextComposition {
-  /// 待渲染文本段落
-  /// 已经预处理: 不重新计算空行 不重新缩进
-  final List<String> paragraphs;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
-  /// 字体样式 字号 [size] 行高 [height] 字体 [family] 字色[Color]
-  final TextStyle style;
+import 'memory_cache.dart';
+import 'text_composition_effect_refactor.dart';
+import 'text_composition_const.dart';
+import 'text_composition_config.dart';
 
-  /// 标题
-  final String? title;
-
-  /// 标题样式
-  final TextStyle? titleStyle;
-
-  /// 标题正文间距
-  final double? titlePadding;
-
-  /// 段间距
-  final double paragraph;
-
-  /// 每一页内容
-  final List<TextPage> pages;
-
-  int get pageCount => pages.length;
-
-  /// 分栏个数
-  final int columnCount;
-
-  /// 分栏间距
-  final double columnGap;
-
-  /// 单栏宽度
-  final double columnWidth;
-
-  /// 容器大小
-  final Size boxSize;
-
-  /// 内部边距
-  final EdgeInsets? padding;
-
-  /// 是否底栏对齐
-  final bool shouldJustifyHeight;
-
-  /// 前景 页眉页脚 菜单等
-  final Widget Function(int pageIndex)? getForeground;
-
-  /// 背景 背景色或者背景图片
-  final ui.Image Function(int pageIndex)? getBackground;
-
-  /// 是否显示动画
-  bool showAnimation;
-
-  // final Pattern? linkPattern;
-  // final TextStyle? linkStyle;
-  // final String Function(String s)? linkText;
-
-  // canvas 点击事件不生效
-  // final void Function(String s)? onLinkTap;
-
-  /// * 文本排版
-  /// * 两端对齐
-  /// * 底栏对齐
-  /// * 多栏布局
-  ///
-  ///
-  /// * [text] 待渲染文本内容 已经预处理: 不重新计算空行 不重新缩进
-  /// * [paragraphs] 待渲染文本内容 已经预处理: 不重新计算空行 不重新缩进
-  /// * [paragraphs] 为空时使用[text], 否则忽略[text],
-  /// * [style] 字体样式 字号 [size] 行高 [height] 字体 [family] 字色[Color]
-  /// * [title] 标题
-  /// * [titleStyle] 标题样式
-  /// * [boxSize] 容器大小
-  /// * [paragraph] 段间距
-  /// * [shouldJustifyHeight] 是否底栏对齐
-  /// * [columnCount] 分栏个数
-  /// * [columnGap] 分栏间距
-  /// * onLinkTap canvas 点击事件不生效
-  TextComposition({
-    String? text,
-    List<String>? paragraphs,
-    required this.style,
-    this.title,
-    this.titleStyle,
-    this.titlePadding,
-    Size? boxSize,
-    this.padding,
-    this.shouldJustifyHeight = true,
-    this.paragraph = 10.0,
-    this.columnCount = 1,
-    this.columnGap = 0.0,
-    this.getForeground,
-    this.getBackground,
-    this.debug = false,
-    List<TextPage>? pages,
-    this.showAnimation = true,
-    // this.linkPattern,
-    // this.linkStyle,
-    // this.linkText,
-    // this.onLinkTap,
-  })  : pages = pages ?? <TextPage>[],
-        paragraphs = paragraphs ?? text?.split("\n") ?? <String>[],
-        boxSize =
-            boxSize ?? ui.window.physicalSize / ui.window.devicePixelRatio,
-        columnWidth = ((boxSize?.width ??
-                    ui.window.physicalSize.width / ui.window.devicePixelRatio) -
-                (padding?.horizontal ?? 0) -
-                (columnCount - 1) * columnGap) /
-            columnCount {
-    // [_width2] [_height2] 用于调整判断
-    final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
-    final offset = Offset(columnWidth, 1);
-    final size = style.fontSize ?? 14;
-    final _dx = padding?.left ?? 0;
-    final _dy = padding?.top ?? 0;
-    final _width = columnWidth;
-    final _width2 = _width - size;
-    final _height = this.boxSize.height - (padding?.vertical ?? 0);
-    final _height2 = _height - size * (style.height ?? 1.0);
-
-    var lines = <TextLine>[];
-    var columnNum = 1;
-    var dx = _dx;
-    var dy = _dy;
-    var startLine = 0;
-
-    if (title != null && title!.isNotEmpty) {
-      String t = title!;
-      while (true) {
-        tp.text = TextSpan(text: title, style: titleStyle);
-        tp.layout(maxWidth: _width);
-        final textCount = tp.getPositionForOffset(offset).offset;
-        final text = t.substring(0, textCount);
-        double? spacing;
-        if (tp.width > _width2) {
-          tp.text = TextSpan(text: text, style: titleStyle);
-          tp.layout();
-          double _spacing = (_width - tp.width) / textCount;
-          if (_spacing < -0.1 || _spacing > 0.1) {
-            spacing = _spacing;
-          }
-        }
-        lines.add(TextLine(text, dx, dy, spacing, true));
-        dy += tp.height;
-        if (t.length == textCount) {
-          break;
-        } else {
-          t = t.substring(textCount);
-        }
-      }
-    }
-
-    /// 下一页 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
-    void newPage([bool shouldJustifyHeight = true, bool lastPage = false]) {
-      if (shouldJustifyHeight && this.shouldJustifyHeight) {
-        final len = lines.length - startLine;
-        double justify = (_height - dy) / (len - 1);
-        for (var i = 0; i < len; i++) {
-          lines[i + startLine].justifyDy(justify * i);
-        }
-      }
-      if (columnNum == columnCount || lastPage) {
-        this.pages.add(TextPage(lines, dy));
-        lines = <TextLine>[];
-        columnNum = 1;
-        dx = _dx;
-      } else {
-        columnNum++;
-        dx += columnWidth + columnGap;
-      }
-      dy = _dy;
-      startLine = lines.length;
-    }
-
-    /// 新段落
-    void newParagraph() {
-      if (dy > _height2) {
-        newPage();
-      } else {
-        dy += paragraph;
-      }
-    }
-
-    for (var p in this.paragraphs) {
-      while (true) {
-        tp.text = TextSpan(text: p, style: style);
-        tp.layout(maxWidth: columnWidth);
-        final textCount = tp.getPositionForOffset(offset).offset;
-        double? spacing;
-        final text = p.substring(0, textCount);
-        if (tp.width > _width2) {
-          tp.text = TextSpan(text: text, style: style);
-          tp.layout();
-          spacing = (_width - tp.width) / textCount;
-        }
-        lines.add(TextLine(text, dx, dy, spacing));
-        dy += tp.height;
-        if (p.length == textCount) {
-          newParagraph();
-          break;
-        } else {
-          p = p.substring(textCount);
-          if (dy > _height2) {
-            newPage();
-          }
-        }
-      }
-    }
-    if (lines.isNotEmpty) {
-      newPage(false, true);
-    }
-    if (this.pages.length == 0) {
-      this.pages.add(TextPage([], 0));
-    }
-  }
-
-  /// 调试模式 输出布局信息
-  bool debug;
-
-  Widget getPageWidget([int pageIndex = 0]) {
-    // if (pageIndex != null && !changePage(pageIndex)) return Container();
-    return Container(
-      width: boxSize.width,
-      height:
-          boxSize.height.isInfinite ? pages[pageIndex].height : boxSize.height,
-      child: CustomPaint(
-          painter: PagePainter(
-              pageIndex, pages[pageIndex], style, titleStyle, debug)),
-    );
-  }
-
-  Future<ui.Image?> getImage(int pageIndex) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = new Canvas(recorder,
-        Rect.fromPoints(Offset.zero, Offset(boxSize.width, boxSize.height)));
-    PagePainter(pageIndex, pages[pageIndex], style, titleStyle, debug)
-        .paint(canvas, boxSize);
-    final picture = recorder.endRecording();
-    return await picture.toImage(boxSize.width.floor(), boxSize.height.floor());
-  }
-
-  void paint(int pageIndex, Canvas canvas) {
-    PagePainter(pageIndex, pages[pageIndex], style, titleStyle, debug)
-        .paint(canvas, boxSize);
-  }
-}
-
-class PagePainter extends CustomPainter {
-  final TextPage page;
-  final TextStyle style;
-  final TextStyle? titleStyle;
-  final int pageIndex;
-  final bool debug;
-  const PagePainter(this.pageIndex, this.page, this.style, this.titleStyle,
-      [this.debug = false]);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (debug)
-      print("****** [TextComposition paint start] [${DateTime.now()}] ******");
-    final lineCount = page.lines.length;
-    final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
-    for (var i = 0; i < lineCount; i++) {
-      final line = page.lines[i];
-      if (line.letterSpacing != null &&
-          (line.letterSpacing! < -0.1 || line.letterSpacing! > 0.1)) {
-        tp.text = TextSpan(
-          text: line.text,
-          style: line.isTitle
-              ? titleStyle?.copyWith(letterSpacing: line.letterSpacing)
-              : style.copyWith(letterSpacing: line.letterSpacing),
-        );
-      } else {
-        tp.text =
-            TextSpan(text: line.text, style: line.isTitle ? titleStyle : style);
-      }
-      final offset = Offset(line.dx, line.dy);
-      if (debug) print("$offset ${line.text}");
-      tp.layout();
-      tp.paint(canvas, offset);
-    }
-    if (debug)
-      print("****** [TextComposition paint end  ] [${DateTime.now()}] ******");
-  }
-
-  @override
-  bool shouldRepaint(PagePainter old) {
-    print("shouldRepaint");
-    return old.pageIndex != pageIndex;
-  }
-}
+export 'text_composition_config.dart';
+export 'text_composition_effect_refactor.dart';
+export 'text_composition_page.dart';
+export 'text_composition_widget.dart';
+export 'text_composition_const.dart';
 
 class TextPage {
-  final List<TextLine> lines;
+  double percent;
+  int number;
+  int total;
+  int chIndex;
+  String info;
   final double height;
-  const TextPage(this.lines, this.height);
+  final double column;
+  final List<TextLine> lines;
+
+  TextPage({
+    this.percent = 0.0,
+    this.total = 1,
+    this.chIndex = 0,
+    this.info = '',
+    required this.column,
+    required this.number,
+    required this.height,
+    required this.lines,
+  });
+}
+
+class TextPageRefactor {
+  final int chIndex;
+  final ui.Picture picture;
+  double percent;
+
+  TextPageRefactor({
+    required this.percent,
+    required this.chIndex,
+    required this.picture,
+  });
 }
 
 class TextLine {
@@ -322,5 +69,593 @@ class TextLine {
 
   justifyDy(double offsetDy) {
     _dy += offsetDy;
+  }
+}
+
+/// 样式设置与刷新
+/// 动画设置与刷新
+class TextComposition extends ChangeNotifier {
+  final TextCompositionConfig config;
+  final Duration duration;
+  final FutureOr<List<String>> Function(int chapterIndex) loadChapter;
+  final FutureOr Function(TextCompositionConfig config, double percent)? onSave;
+  final Widget Function(TextComposition textComposition)? menuBuilder;
+  final String? name;
+  final List<String> chapters;
+  final List<AnimationController> _controllers;
+
+  double _initPercent;
+  int _firstChapterIndex;
+  int _lastChapterIndex;
+
+  int _firstIndex, _currentIndex, _lastIndex;
+  int get firstIndex => _firstIndex;
+  int get currentIndex => _currentIndex;
+  int get lastIndex => _lastIndex;
+  bool get _isFirstPage => _currentIndex <= _firstIndex;
+  bool get _isLastPage => _currentIndex >= _lastIndex;
+
+  final Map<int, TextPage> textPages;
+  final MemoryCache<int, ui.Picture> pictures;
+  ui.Picture? getPicture(int index, Size size) => pictures.getValueOrSet(index, () {
+        final textPage = textPages[index];
+        if (textPage == null) return null;
+        final pic = ui.PictureRecorder();
+        final c = Canvas(pic);
+        final pageRect = Rect.fromLTRB(0.0, 0.0, size.width, size.height);
+        c.drawRect(pageRect, Paint()..color = config.backgroundColor);
+        paintText(c, size, textPage, config);
+        return pic.endRecording();
+      });
+  String get animation => config.animation;
+  Color get backgroundColor => config.backgroundColor;
+  bool get shouldClipStatus => config.showStatus && !config.animationStatus;
+
+  final int cutoffNext;
+  final int cutoffPrevious;
+
+  int _tapWithoutNoCounter;
+  bool _disposed;
+  bool? isForward;
+  bool _isShowMenu;
+  bool get isShowMenu => _isShowMenu;
+  static const BASE = 8;
+  static const QUARTER = BASE * 8;
+  static const HALF = QUARTER * 2;
+  static const TOTAL = HALF * 2;
+  TextComposition({
+    required this.config,
+    required this.loadChapter,
+    required this.chapters,
+    this.name,
+    this.onSave,
+    this.menuBuilder,
+    percent = 0.0,
+    this.cutoffPrevious = 8,
+    this.cutoffNext = 92,
+  })  : this._initPercent = percent,
+        textPages = {},
+        pictures = MemoryCache(),
+        _lastSaveTime = DateTime.now().add(saveDelay).millisecondsSinceEpoch,
+        _controllers = [],
+        _firstChapterIndex = (percent * chapters.length).floor(),
+        _lastChapterIndex = (percent * chapters.length).floor(),
+        _firstIndex = -1,
+        _currentIndex = -1,
+        _lastIndex = -1,
+        duration = Duration(milliseconds: config.animationDuration),
+        _tapWithoutNoCounter = 0,
+        _disposed = false,
+        _isShowMenu = false;
+  //  {
+  // _pages = [
+  //   Container(
+  //     color: const Color(0xFFFFFFCC),
+  //     width: double.infinity,
+  //     height: double.infinity,
+  //     child: Column(
+  //       mainAxisSize: MainAxisSize.min,
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       children: [
+  //         Text(name ?? ""),
+  //         SizedBox(height: 10),
+  //         Text("加载第${_lastChapterIndex + 1}个章节"),
+  //         SizedBox(height: 10),
+  //         Text("${chapters[_lastChapterIndex]}"),
+  //         SizedBox(height: 30),
+  //         CupertinoActivityIndicator(),
+  //       ],
+  //     ),
+  //   )
+  // ];
+  // }
+
+  toggleMenuDialog(BuildContext context) {
+    _isShowMenu = !_isShowMenu;
+    if (menuBuilder == null) {
+      if (_isShowMenu) {
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: Text('阅读设置'),
+                  titlePadding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  contentPadding: EdgeInsets.zero,
+                  content: Container(
+                    width: 520,
+                    child: configSettingBuilder(
+                      context,
+                      config,
+                      (Color color, void Function(Color color) onChange) {
+                        print("选择颜色");
+                      },
+                    ),
+                  ),
+                )).then((value) {
+          _isShowMenu = false;
+          notifyListeners();
+        });
+      } else {
+        Navigator.of(context).pop();
+      }
+    } else {
+      notifyListeners();
+    }
+  }
+
+  gotoNextChapter() {
+    final cPage = textPages[_currentIndex];
+    if (cPage == null) return;
+    final nextIndex = cPage.total - cPage.number + _currentIndex + 1;
+    goToPage(nextIndex);
+  }
+
+  gotoPreviousChapter() {
+    final cPage = textPages[_currentIndex];
+    if (cPage == null) return;
+    final previousIndex = _currentIndex - cPage.number;
+    goToPage(previousIndex);
+  }
+
+  gotoChapter(int index) async {
+    // 如果章节在加载范围内
+    if (_disposed) return;
+    if (index <= _lastChapterIndex && index >= _firstChapterIndex) {
+      var ci = index - textPages[_currentIndex]!.chIndex;
+      if (ci > 0) {
+        int nextIndex = _currentIndex;
+        for (var i = 0; i < ci; i++) {
+          final cPage = textPages[nextIndex]!;
+          nextIndex += cPage.total - cPage.number + 1;
+        }
+        goToPage(nextIndex);
+      } else if (ci < 0) {
+        int previousIndex = _currentIndex;
+        for (var i = 0; i > ci; i--) {
+          final cPage = textPages[previousIndex]!;
+          previousIndex -= cPage.number;
+        }
+        goToPage(previousIndex);
+      }
+    } else {
+      // 不在范围
+      if (index < 0 || index > chapters.length) return;
+      if (_disposed) return;
+      final pages = await startX(index);
+      if (_disposed) return;
+      pictures.clear();
+      textPages.clear();
+      _firstChapterIndex = index;
+      _lastChapterIndex = index;
+      _currentIndex = TOTAL * 12345 + HALF;
+      _firstIndex = _currentIndex;
+      _lastIndex = _firstIndex + pages.length - 1;
+      for (var i = 0; i < pages.length; i++) {
+        this.textPages[_firstIndex + i] = pages[i];
+      }
+      final c = _currentIndex % TOTAL;
+      for (var i = c - HALF, end = c; i < end; i++) {
+        _controllers[i % TOTAL].value = 0;
+      }
+      for (var i = c, end = c + HALF; i < end; i++) {
+        _controllers[i % TOTAL].value = 1;
+      }
+      _tapWithoutNoCounter = BASE;
+      notifyListeners();
+      previousChapter();
+      nextChapter();
+    }
+  }
+
+  Future<void> init(
+      void Function(List<AnimationController> _controller) initControllers) async {
+    initControllers(_controllers);
+    if (_disposed) return;
+    final pages = await startX(_firstChapterIndex);
+    if (_disposed) return;
+    _currentIndex = TOTAL * 12345 + HALF;
+    final n =
+        ((_initPercent * chapters.length - _firstChapterIndex) * pages.length).round();
+    if (n < 2) {
+      _firstIndex = _currentIndex;
+    } else if (n < pages.length) {
+      _firstIndex = _currentIndex - n + 1;
+    } else {
+      _firstIndex = _currentIndex - pages.length + 1;
+    }
+    _lastIndex = _firstIndex + pages.length - 1;
+    for (var i = 0; i < pages.length; i++) {
+      this.textPages[_firstIndex + i] = pages[i];
+    }
+    final c = _currentIndex % TOTAL;
+    for (var i = c - HALF, end = c; i < end; i++) {
+      _controllers[i % TOTAL].value = 0;
+    }
+    for (var i = c, end = c + HALF; i < end; i++) {
+      _controllers[i % TOTAL].value = 1;
+    }
+    _tapWithoutNoCounter = BASE;
+    notifyListeners();
+    Future.delayed(duration).then((value) {
+      previousChapter();
+      nextChapter();
+    });
+  }
+
+  List<Widget> get pages {
+    return [
+      for (var i = _currentIndex + HALF, last = _currentIndex - HALF; i > last; i--)
+        CustomPaint(
+          painter: TextCompositionEffect(
+            amount: _controllers[i % TOTAL],
+            index: i,
+            textComposition: this,
+          ),
+        ),
+    ];
+  }
+
+  double getAnimationPostion(int index) => _controllers[index % TOTAL].value;
+
+  void _checkController(int index, [bool next = false]) {
+    if (_disposed || _controllers.length != TOTAL) return;
+    (next
+            ? _controllers[index % TOTAL].reverse()
+            : _controllers[(index - 1) % TOTAL].forward())
+        .then((value) {
+      if (_disposed || _controllers.length != TOTAL) return;
+      if (_firstChapterIndex == textPages[index]!.chIndex) previousChapter();
+      if (_lastChapterIndex == textPages[index]!.chIndex) nextChapter();
+      if (_tapWithoutNoCounter == HALF - BASE) {
+        final c = index % TOTAL;
+        for (var i = c - HALF, end = c - BASE; i < end; i++) {
+          _controllers[i % TOTAL].value = 0;
+        }
+        for (var i = c + BASE, end = c + HALF; i < end; i++) {
+          _controllers[i % TOTAL].value = 1;
+        }
+        _tapWithoutNoCounter = BASE;
+        notifyListeners();
+      } else {
+        _tapWithoutNoCounter++;
+      }
+    });
+  }
+
+  int _lastSaveTime;
+  static const saveDelay = const Duration(seconds: 10);
+  checkSave() {
+    if (onSave == null) return;
+    _lastSaveTime = DateTime.now().add(saveDelay).millisecondsSinceEpoch;
+    Future.delayed(saveDelay).then((value) {
+      if (_disposed || DateTime.now().millisecondsSinceEpoch < _lastSaveTime) return;
+      print("checkSave ${DateTime.now()}");
+      onSave?.call(config, textPages[_currentIndex]!.percent);
+    });
+  }
+
+  void previousPage() {
+    if (_disposed || _isFirstPage) return;
+    _checkController(_currentIndex);
+    _currentIndex--;
+    checkSave();
+  }
+
+  void nextPage() {
+    if (_disposed || _isLastPage) return;
+    _checkController(_currentIndex, true);
+    _currentIndex++;
+    checkSave();
+  }
+
+  Future<void> goToPage(int index) async {
+    if (_disposed ||
+        _controllers.length != TOTAL ||
+        index > _lastIndex ||
+        index < _firstIndex) return;
+    final c = index % TOTAL;
+    for (var i = c - HALF, end = c; i < end; i++) {
+      _controllers[i % TOTAL].value = 0;
+    }
+    for (var i = c, end = c + HALF; i < end; i++) {
+      _controllers[i % TOTAL].value = 1;
+    }
+    _tapWithoutNoCounter = BASE;
+
+    if (index > _currentIndex) {
+      _controllers[(index - 1) % TOTAL].reverse(from: 1);
+    } else {
+      _controllers[index % TOTAL].forward(from: 0);
+    }
+
+    _currentIndex = index;
+    checkSave();
+    notifyListeners();
+    Future.delayed(duration).then((value) {
+      if (_firstChapterIndex == textPages[index]!.chIndex) previousChapter();
+      if (_lastChapterIndex == textPages[index]!.chIndex) nextChapter();
+    });
+  }
+
+  void turnPage(DragUpdateDetails details, BoxConstraints dimens) {
+    if (_disposed) return;
+    final _ratio = details.delta.dx / dimens.maxWidth;
+    if (isForward == null) {
+      if (details.delta.dx > 0) {
+        isForward = false;
+      } else {
+        isForward = true;
+      }
+    }
+    if (isForward!) {
+      _controllers[currentIndex % TOTAL].value += _ratio;
+    } else if (!_isFirstPage) {
+      _controllers[(currentIndex - 1) % TOTAL].value += _ratio;
+    }
+  }
+
+  Future<void> onDragFinish() async {
+    if (_disposed) return;
+    if (isForward != null) {
+      if (isForward!) {
+        if (!_isLastPage &&
+            _controllers[currentIndex % TOTAL].value <= (cutoffNext / 100 + 0.03)) {
+          nextPage();
+        } else {
+          _controllers[currentIndex % TOTAL].forward();
+        }
+      } else {
+        if (!_isFirstPage &&
+            _controllers[(currentIndex - 1) % TOTAL].value >=
+                (cutoffPrevious / 100 + 0.05)) {
+          previousPage();
+        } else {
+          if (_isFirstPage) {
+            _controllers[currentIndex % TOTAL].forward();
+          } else {
+            _controllers[(currentIndex - 1) % TOTAL].reverse();
+          }
+        }
+      }
+    }
+    isForward = null;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    if (textPages[currentIndex] != null) {
+      onSave?.call(config, textPages[_currentIndex]!.percent);
+    }
+    _controllers.forEach((c) => c.dispose());
+    _controllers.clear();
+    textPages.forEach((key, value) => value.lines.clear());
+    // textPages.forEach((key, value) => value.picture.dispose());
+    textPages.clear();
+    pictures.clear();
+    super.dispose();
+  }
+
+  var _previousChapterLoading = false;
+  Future<void> previousChapter() async {
+    if (_disposed || _firstChapterIndex <= 0 || _previousChapterLoading) return;
+    _previousChapterLoading = true;
+    final pages = await startX(_firstChapterIndex - 1);
+    if (_disposed) return;
+    for (var i = 0; i < pages.length; i++) {
+      this.textPages[_firstIndex - pages.length + i] = pages[i];
+    }
+    _firstIndex -= pages.length;
+    _firstChapterIndex--;
+    _previousChapterLoading = false;
+  }
+
+  var _nextChapterLoading = false;
+  Future<void> nextChapter([bool animation = true]) async {
+    if (_disposed || _lastChapterIndex >= chapters.length - 1 || _nextChapterLoading)
+      return;
+    _nextChapterLoading = true;
+    final pages = await startX(_lastChapterIndex + 1);
+    if (_disposed) return;
+    for (var i = 0; i < pages.length; i++) {
+      this.textPages[_lastIndex + 1 + i] = pages[i];
+    }
+    _lastIndex += pages.length;
+    _lastChapterIndex++;
+    _nextChapterLoading = false;
+  }
+
+  Future<List<TextPage>> startX(int index) async {
+    if (_disposed) return <TextPage>[];
+    final paragraphs = await loadChapter(index);
+    if (_disposed) return <TextPage>[];
+    final pages = <TextPage>[];
+    final size = ui.window.physicalSize / ui.window.devicePixelRatio;
+    final columns = config.columns > 0
+        ? config.columns
+        : size.width > 580
+            ? 2
+            : 1;
+    final _width = (size.width -
+            config.leftPadding -
+            config.rightPadding -
+            (columns - 1) * config.columnPadding) /
+        columns;
+    final _width2 = _width - config.fontSize;
+    final _height = size.height - (config.showInfo ? 24 : 0) - config.bottomPadding;
+    final _height2 = _height - config.fontSize * config.fontHeight;
+
+    final tp = TextPainter(textDirection: TextDirection.ltr, maxLines: 1);
+    final offset = Offset(_width, 1);
+    final _dx = config.leftPadding;
+    final _dy = config.topPadding +
+        (config.showStatus ? ui.window.padding.top / ui.window.devicePixelRatio : 0);
+
+    var lines = <TextLine>[];
+    var columnNum = 1;
+    var dx = _dx;
+    var dy = _dy;
+    var startLine = 0;
+
+    final titleStyle = TextStyle(
+      fontWeight: FontWeight.bold,
+      fontSize: config.fontSize + 2,
+      fontFamily: config.fontFamily,
+      color: config.fontColor,
+      height: config.fontHeight,
+    );
+    final style = TextStyle(
+      fontSize: config.fontSize,
+      fontFamily: config.fontFamily,
+      color: config.fontColor,
+      height: config.fontHeight,
+    );
+
+    // String t = chapters[index].replaceAll(RegExp("^\s*|\n|\s\$"), "");
+    final chapter = chapters[index].isEmpty ? "第$index章" : chapters[index];
+    var _t = chapter;
+    while (true) {
+      tp.text = TextSpan(text: _t, style: titleStyle);
+      tp.layout(maxWidth: _width);
+      final textCount = tp.getPositionForOffset(offset).offset;
+      final text = _t.substring(0, textCount);
+      double? spacing;
+      if (tp.width > _width2) {
+        tp.text = TextSpan(text: text, style: titleStyle);
+        tp.layout();
+        double _spacing = (_width - tp.width) / textCount;
+        if (_spacing < -0.1 || _spacing > 0.1) {
+          spacing = _spacing;
+        }
+      }
+      lines.add(TextLine(text, dx, dy, spacing, true));
+      dy += tp.height;
+      if (_t.length == textCount) {
+        break;
+      } else {
+        _t = _t.substring(textCount);
+      }
+    }
+    dy += config.titlePadding;
+
+    var pageIndex = 1;
+
+    /// 下一页 判断分页 依据: `_boxHeight` `_boxHeight2`是否可以容纳下一行
+    void newPage([bool shouldJustifyHeight = true, bool lastPage = false]) {
+      if (shouldJustifyHeight && config.justifyHeight) {
+        final len = lines.length - startLine;
+        double justify = (_height - dy) / (len - 1);
+        for (var i = 0; i < len; i++) {
+          lines[i + startLine].justifyDy(justify * i);
+        }
+      }
+      if (columnNum == columns || lastPage) {
+        pages.add(TextPage(
+          lines: lines,
+          height: dy,
+          number: pageIndex++,
+          info: chapter,
+          chIndex: index,
+          column: _width,
+        ));
+        lines = <TextLine>[];
+        columnNum = 1;
+        dx = _dx;
+      } else {
+        columnNum++;
+        dx += _width + config.columnPadding;
+      }
+      dy = _dy;
+      startLine = lines.length;
+    }
+
+    for (var p in paragraphs) {
+      p = indentation * config.indentation + p;
+      while (true) {
+        tp.text = TextSpan(text: p, style: style);
+        tp.layout(maxWidth: _width);
+        final textCount = tp.getPositionForOffset(offset).offset;
+        double? spacing;
+        final text = p.substring(0, textCount);
+        if (tp.width > _width2) {
+          tp.text = TextSpan(text: text, style: style);
+          tp.layout();
+          spacing = (_width - tp.width) / textCount;
+        }
+        lines.add(TextLine(text, dx, dy, spacing));
+        dy += tp.height;
+        if (p.length == textCount) {
+          if (dy > _height2) {
+            newPage();
+          } else {
+            dy += config.paragraphPadding;
+          }
+          break;
+        } else {
+          p = p.substring(textCount);
+          if (dy > _height2) {
+            newPage();
+          }
+        }
+      }
+    }
+    if (lines.isNotEmpty) {
+      newPage(false, true);
+    }
+    if (pages.length == 0) {
+      pages.add(TextPage(
+        lines: [],
+        height: config.topPadding + config.bottomPadding,
+        number: 1,
+        info: chapter,
+        chIndex: index,
+        column: _width,
+      ));
+    }
+
+    final basePercent = index / chapters.length;
+    final total = pages.length;
+    pages.forEach((page) {
+      page.total = total;
+      page.percent = page.number / pages.length / chapters.length + basePercent;
+    });
+    if (name != null) {
+      pages[0].info = name!;
+    }
+
+    return pages;
+
+    // return pages.map((textPage) {
+    //   final pic = ui.PictureRecorder();
+    //   final c = Canvas(pic);
+    //   final pageRect = Rect.fromLTRB(0.0, 0.0, size.width, size.height);
+    //   c.drawRect(pageRect, Paint()..color = config.backgroundColor);
+    //   paintText(c, size, textPage, config);
+    //   final picture = pic.endRecording();
+    //   return TextPageRefactor(
+    //     chIndex: index,
+    //     percent: textPage.percent,
+    //     picture: picture,
+    //   );
+    // }).toList();
   }
 }
